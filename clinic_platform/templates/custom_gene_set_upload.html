@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<h2>Select settings and sample</h2>
+
+
+<form action="" method="post">
+    {% csrf_token %}
+    <label for="anno_file_selection">Custom annotation to load: </label>
+    <br>
+    <select id="anno_file_selection" name="anno_file_selection">
+
+        {% for anno_file in anno_file_list %}
+            <option value="{{anno_file}}">{{anno_file}}</option>
+        {% endfor %}
+
+    </select>
+
+    <br>
+    Panel name:<br>
+    <input type="text" name="panelName" value="{{anno_file}}">
+
+    <br>
+    Phenotype:<br>
+    <input type="text" name="phenotype">
+
+    <br>
+    Bam file list:<br>
+    {% for bam in bam_list %}
+    <input type="checkbox" name="bamFiles" value="{{bam}}">{{bam}}<br>
+    {% endfor %}
+    <br>
+
+    <input type="submit" value="OK">
+</form>
+
+{% endblock %}

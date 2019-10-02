@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+
+<div>
+
+    <h2>
+        Input list
+    </h2>
+
+    <form method="post">
+    {% csrf_token %}
+        <table>
+        {{form.as_table}}
+
+        </table>
+
+        <br>
+        Bam file list:
+        <br>
+            {% for bam in bam_list %}
+              <input type="checkbox" name="bamFiles" value="{{bam}}">{{bam}}<br>
+            {% endfor %}
+        <br>
+        Annotation:
+
+        <select id="anno_selection" name="anno_selection">
+
+        {% for anno in gff_list %}
+            <option value="{{anno}}">{{anno}}</option>
+        {% endfor %}
+
+        </select>
+        <br>
+
+
+        <input type="submit" value="Submit" />
+    </form>
+
+
+</div>
+
+
+{% endblock %}

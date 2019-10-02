@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<h2>Coverage info for gene: {{view_info.gene}}</h2>
+
+<div>
+    <h3>Settings:</h3>
+    Coverage threshold: {{view_info.cov_threshold}}
+    <br>
+    More info on gene : <a href="https://www.ncbi.nlm.nih.gov/nuccore/{{view_info.gene}}"> Here </a>
+</div>
+<br>
+
+<div id="table1">
+    <h2>Coverage over threshold</h2>
+
+
+    {% for transcript_name, transcript_matrix in trans_cov_matrix.items %}
+
+    <h3>Transcript: {{transcript_name}}</h3>
+
+    <table id="myTable">
+        <tr>
+            {% for col in transcript_matrix.header %}
+                <th>{{col}}</th>
+            {% endfor %}
+
+        </tr>
+        {% for sample_list in transcript_matrix.samples %}
+
+        <tr>
+            {% for sample_col in sample_list %}
+
+            <th style="background-color:rgba(255,0,0,{{sample_col.cot_perc}});">{{sample_col.cot}}</th>
+
+            {% endfor %}
+        </tr>
+        {% endfor %}
+
+    </table>
+
+
+</div>
+
+
+<div id="table2">
+    <h2>Average coverage</h2>
+    <table id="myTable">
+      <tr>
+          {% for col in transcript_matrix.header %}
+          <th>{{col}}</th>
+          {% endfor %}
+
+      </tr>
+        {% for sample_list in transcript_matrix.samples %}
+        <tr>
+            {% for sample_col in sample_list %}
+
+            <th style="background-color:rgba(255,0,0,{{sample_col.cot_perc}});">{{sample_col.avc}}</th>
+
+            {% endfor %}
+        </tr>
+        {% endfor %}
+
+    </table>
+</div>
+
+    {% endfor %}
+
+
+{% endblock %}

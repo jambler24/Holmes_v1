@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="{% static 'jquery-3.3.1.min.js' %}"></script>
+<script src='https://cdn.rawgit.com/nicgirault/circosJS/v2/dist/circos.js'></script>
+
+<div >
+    <div>
+        <h1>
+            Holmes Analytics Platform
+        </h1>
+
+    </div>
+
+    <div>
+        <h2>Current data info</h2>
+
+            <h3>Information on the data currently loaded into the system.</h3>
+                <ul>
+                    <li>Loaded genome: {{ref_files.genome }}</li>
+                    <li>Loaded annotation: {{ ref_files.annotation }}</li>
+                    <li>Loaded bam files: {{ loaded_bam }}</li>
+                    <li>Loaded panels: {{ loaded_panel_count }}</li>
+                </ul>
+
+
+    </div>
+
+</div>
+{% endblock %}

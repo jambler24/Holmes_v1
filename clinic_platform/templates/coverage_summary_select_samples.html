@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+
+<h2>Select settings and annotation</h2>
+
+<form action="" method="post">
+    {% csrf_token %}
+
+    <label form="selection_form">Gene set: </label>
+
+    <select id="set_selection" name="set_selection">
+
+        {% for set in gene_set_list %}
+            <option value="{{set}}">{{set}}</option>
+        {% endfor %}
+
+    </select>
+
+    <br>
+
+    Level:
+        <select id="set_level" name="set_level">
+
+            <option value="exon">Exon</option>
+            <option value="cds">CDS</option>
+
+    </select>
+
+
+    <br>
+
+    <input type="submit" value="OK">
+</form>
+
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<br>
+
+<form action="" method="post">
+    {% csrf_token %}
+    <label for="panel_selection">Panel: </label>
+    <select id="panel_selection" name="panel_selection">
+
+        {% for panel in panel_list %}
+            <option value="{{panel}}">{{panel}}</option>
+        {% endfor %}
+
+    </select>
+
+    <br>
+
+    <input type="submit" value="OK">
+</form>
+
+<h3>Details for panel: {{ panel_name }}</h3>
+
+<br>
+
+
+{% for a_bam in bam_list %}
+<p>{{a_bam}}</p>
+{% endfor %}
+
+{% for a_gene in gene_info %}
+<p>{{a_gene.gene_id}} {{a_gene.db}} {{a_gene.trans_no}}</p>
+{% endfor %}
+
+{% endblock %}

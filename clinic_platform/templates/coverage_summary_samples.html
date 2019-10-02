@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<h2>Coverage info for samples</h2>
+
+<div>
+    <h3>Settings:</h3>
+    Coverage threshold: {{view_info.cov_threshold}}
+    <br>
+    Gene set: {{view_info.anno_file}}
+</div>
+<br>
+
+<div id="table1" style="float: left;">
+    <h2>Coverage over threshold</h2>
+
+   {% for a_gene, matrix in cot_matrix.items %}
+
+        <h3>For gene: {{a_gene}}</h3>
+
+
+        <table id="myTable">
+          <tr>
+              {% for sample in sample_list %}
+              <th>{{sample}}</th>
+              {% endfor %}
+
+          </tr>
+            {% for sample_list in matrix %}
+            <tr>
+                {% for sample_col in sample_list %}
+
+                <th style="background-color:rgba(255,0,0,{{sample_col.cot_perc}});">{{sample_col.cot}}</th>
+
+                {% endfor %}
+            </tr>
+            {% endfor %}
+
+        </table>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

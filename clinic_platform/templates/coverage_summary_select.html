@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<h2>Select settings and sample</h2>
+
+
+<form action="" method="post">
+    {% csrf_token %}
+    <label for="panel_selection">Panel: </label>
+    <select id="panel_selection" name="panel_selection">
+
+        {% for panel in gene_panels %}
+            <option value="{{panel}}">{{panel}}</option>
+        {% endfor %}
+
+    </select>
+
+    <br>
+
+    <label for="a_gene_selection">Gene: </label>
+    <select id="a_gene_selection" name="a_gene_selection">
+
+        {% for a_gene in gene_list %}
+            <option value="{{a_gene}}">{{a_gene}}</option>
+        {% endfor %}
+
+    </select>
+
+    <br>
+
+    <input type="submit" value="OK">
+</form>
+
+{% endblock %}
