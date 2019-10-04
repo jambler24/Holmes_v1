@@ -879,3 +879,17 @@ def panel_detail_view(request):
 		return render(request, 'panel_details.html', {'panel_list': panel_list, 'panel_name': selected_panel})
 
 
+def add_experiment(request):
+
+	if request.method == 'POST':
+
+		print('things')
+
+		return redirect('/')
+
+	else:
+
+		return render(request, 'gene_list_2_db.html')
+
+
+

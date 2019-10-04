@@ -18,6 +18,26 @@ class Experiment(models.Model):
 		return self.experiment_shortname
 
 
+class ExpressionSet(models.Model):
+	comparison = models.CharField(max_length=160, help_text='TBD')
+	source_file = models.CharField(max_length=160, help_text='TBD')
+	experiment = models.ForeignKey(Experiment, on_delete=models.CASCADE)
+
+	def __str__(self):
+		return self.comparison
+
+
+class GeneExpression(models.Model):
+	expression_set = models.ForeignKey(ExpressionSet, on_delete=models.CASCADE)
+	gene_id = models.CharField(max_length=60, help_text='')
+	p_value = models.FloatField()
+	q_value = models.FloatField()
+	fold_change = models.FloatField()
+
+	def __str__(self):
+		return self.gene_id
+
+
 class CurrentSettings(models.Model):
 	"""The settings for the current user and session"""
 
@@ -34,6 +54,8 @@ class PanelGeneList(models.Model):
 	gene_list = models.TextField(max_length=10000, help_text='Comma separated list of gene IDs')
 
 	bam_files = models.TextField(max_length=2000, default='None')
+
+	comparison = models.CharField(max_length=160, default='None')
 
 	last_threshold = models.IntegerField(default=-1)
 

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<div>
+    <h2> Create experiment </h2>
+
+    <p>Info</p>
+
+
+    <form method="post">
+        {% csrf_token %}
+
+        Experiment name:<br>
+        <input type="text" name="ExperimentName">
+
+
+
+
+        <br><br>
+      <input type="submit">
+    </form>
+
+
+</div>
+
+{% endblock %}
