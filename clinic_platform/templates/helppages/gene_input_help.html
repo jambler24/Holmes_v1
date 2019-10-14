@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<h1>Help</h1>
+
+<h2>How to get genes of interest into the system</h2>
+
+To work with a set of genes, you will need to load them into the system and associate any relevant files to the set. This can be done in two ways.
+
+
+<h3>If you have an existing bed file of genes</h3>
+
+If you have the genes / regions of interest in a bed file, selects "Gene input" above, and then select "Add custom annotation".
+
+The drop down menu will show any bed files detected in the "annotations" folder. Select the bed file, and provide a unique descriptor for the panel.
+Then add a description of the phenotype. This is optional, but helpful.
+Then select any bam files from the "bam_files" folder that are relevant to this panel and select ok.
+The panel has now been loaded into the system.
+
+A requirement of this method, is that the bed file has the feature name in column 4, and the exon number on column 5. Or more generally, that if a feature has more than 1 region associated with it, that column 4 is used to identify the region to that feature, and column 5 to identify which order they go in.
+
+
+
+<h3>If you want to extract a subset of genes from the organisms genome</h3>
+
+
+{% endblock %}

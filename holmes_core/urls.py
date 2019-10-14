@@ -40,5 +40,7 @@ urlpatterns = [
     url('panelDetails/$', views.panel_detail_view, name='panelDetails'),
     url('addExperiment/$', views.add_experiment, name='addExperiment'),
     url('addExpressionData/$', views.add_expression_data, name='addExpressionData'),
+    url('helpGeneInput/$', views.help_gene_input, name='helpGeneInput'),
+
 
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

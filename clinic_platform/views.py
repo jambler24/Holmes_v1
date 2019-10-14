@@ -973,3 +973,7 @@ def add_expression_data(request):
 			}
 		)
 
+
+def help_gene_input(request):
+	return render(request, "helppages/gene_input_help.html")
+
