@@ -11,7 +11,7 @@ from networkx.readwrite import json_graph
 import clinic_platform.coverage_tools as cov_tools
 from .processing import *
 from .forms import UploadFileForm, PanelListForm
-from clinic_platform.models import Experiment, CurrentSettings, PanelGeneList, TranscriptInfo, GeneInfo, CDSInfo
+from clinic_platform.models import GeneExpression, ExpressionSet, Experiment, CurrentSettings, PanelGeneList, TranscriptInfo, GeneInfo, CDSInfo
 from os import listdir
 from os.path import isfile, join
 from bs4 import BeautifulSoup
@@ -883,13 +883,93 @@ def add_experiment(request):
 
 	if request.method == 'POST':
 
-		print('things')
+		if request.POST['timeSeries'] == 'True':
+			time_series = True
+		else:
+			time_series = False
+
+		if not Experiment.objects.filter(experiment_shortname=request.POST['experimentName']).exists():
+
+			experiment_obj = Experiment(
+				experiment_shortname=request.POST['experimentName'],
+				comparisons=request.POST['comparison'],
+				time_series=time_series,
+			)
+			experiment_obj.save()
 
 		return redirect('/')
 
 	else:
 
-		return render(request, 'gene_list_2_db.html')
+		return render(request, 'create_experiment.html')
 
 
+def add_expression_data(request):
+
+	if request.method == 'POST':
+
+		experiment_name = request.POST['experimentName']
+		expression_comparison = request.POST['comparison']
+		expression_file = request.POST['sourceFile']
+
+		experiment_obj = Experiment.objects.get(experiment_shortname=experiment_name)
+
+		exp_set_obj = ExpressionSet(
+			comparison=expression_comparison,
+			source_file=expression_file,
+			experiment=experiment_obj
+		)
+
+		exp_set_obj.save()
+
+		path_to_expression_file = bam_files_dir + expression_file
+
+		expression_info = expression_file_parser(path_to_expression_file)
+
+		expression_info['exp_set_obj'] = exp_set_obj
+
+		expression_info.apply(save_expression_data, axis=1)
+
+
+
+		'''
+
+		experiment_obj = Experiment(
+			experiment_shortname=request.POST['experimentName'],
+			comparisons=request.POST['comparison'],
+			time_series=time_series,
+		)
+		experiment_obj.save()
+		'''
+
+		return redirect('/')
+
+	else:
+
+		# Get list of existing experiments to link
+
+		experiment_obj_list = list(Experiment.objects.all())
+		experiment_list = []
+
+		for thing in experiment_obj_list:
+			experiment_list.append(thing)
+
+		# Get a list of the available expression files
+
+		all_expression_files = os.listdir(bam_files_dir)
+		clean_expression_list = []
+
+		allowed_files = ['csv']
+
+		for file in all_expression_files:
+			if file.split('.')[-1].lower() in allowed_files:
+				clean_expression_list.append(file)
+
+		print(clean_expression_list)
+
+		return render(request, 'add_expression_data.html', {
+			'expression_file_list': clean_expression_list,
+			'experiments': experiment_list
+			}
+		)
 

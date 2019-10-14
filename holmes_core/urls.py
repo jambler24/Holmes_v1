@@ -38,5 +38,7 @@ urlpatterns = [
     url('process_bam/$', views.process_sample_coverage, name='processSampleCoverage'),
     url('custom_lists/$', views.gene_file_to_db, name='geneFileToDB'),
     url('panelDetails/$', views.panel_detail_view, name='panelDetails'),
+    url('addExperiment/$', views.add_experiment, name='addExperiment'),
+    url('addExpressionData/$', views.add_expression_data, name='addExpressionData'),
 
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

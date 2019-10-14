@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<div>
+    <h2> Add expression result </h2>
+
+    <p>Info</p>
+
+
+    <form method="post">
+        {% csrf_token %}
+
+        Experiment name:<br>
+        <select name="experimentName">
+            {% for experiment in experiments %}
+              <option value="{{experiment}}">{{experiment}}</option>
+            {% endfor %}
+        </select>
+        <br>
+        Comparison:<br>
+        <input type="text" name="comparison">
+        <br>
+        Source file:<br>
+        <select name="sourceFile">
+            {% for file in expression_file_list %}
+              <option value="{{file}}">{{file}}</option>
+            {% endfor %}
+        </select>
+
+        <br><br>
+      <input type="submit">
+    </form>
+
+
+</div>
+
+{% endblock %}

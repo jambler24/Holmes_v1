@@ -16,10 +16,16 @@
         {% csrf_token %}
 
         Experiment name:<br>
-        <input type="text" name="ExperimentName">
-
-
-
+        <input type="text" name="experimentName">
+        <br>
+        Comparison:<br>
+        <input type="text" name="comparison">
+        <br>
+        Time series:<br>
+        <select name="timeSeries">
+              <option value="True">True</option>
+              <option value="False">False</option>
+        </select>
 
         <br><br>
       <input type="submit">

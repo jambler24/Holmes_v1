@@ -30,9 +30,9 @@ class ExpressionSet(models.Model):
 class GeneExpression(models.Model):
 	expression_set = models.ForeignKey(ExpressionSet, on_delete=models.CASCADE)
 	gene_id = models.CharField(max_length=60, help_text='')
-	p_value = models.FloatField()
-	q_value = models.FloatField()
-	fold_change = models.FloatField()
+	p_value = models.FloatField(null=True)
+	q_value = models.FloatField(null=True)
+	fold_change = models.FloatField(null=True)
 
 	def __str__(self):
 		return self.gene_id

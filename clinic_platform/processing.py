@@ -1,8 +1,9 @@
 import networkx as nx
 import csv, os
 import django_tables2 as tables
-from clinic_platform.models import CurrentSettings, Experiment, PanelGeneList, GeneInfo, TranscriptInfo, ExonInfo, CDSInfo
+from clinic_platform.models import CurrentSettings, Experiment, PanelGeneList, GeneInfo, TranscriptInfo, ExonInfo, CDSInfo, GeneExpression
 import re
+import pandas
 from GenGraph import *
 from Bio.Seq import translate
 from os import listdir
@@ -32,6 +33,25 @@ def subnet2json(in_graph):
 }
 
 '''
+
+
+def save_expression_data(row):
+
+	exp_obj = GeneExpression(
+		expression_set=row['exp_set_obj'],
+		gene_id=row.name,
+		p_value=row['pvalue'],
+		q_value=row['padj'],
+		fold_change=row['log2FoldChange']
+	)
+	exp_obj.save()
+
+
+def expression_file_parser(file_path):
+
+	expression_df = pandas.read_csv(open(file_path, 'r'), index_col=0)
+
+	return expression_df
 
 
 def input_parser(file_path):
