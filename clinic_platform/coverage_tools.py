@@ -335,6 +335,9 @@ def calc_average_gene_coverage_info(a_gene, bam_file_list, level="exon"):
 
 					exon_obj = ExonInfo.objects.get(exon_id=an_exon)
 
+					print('----+')
+					print(exon_obj.pb_coverage)
+
 					bp_cov_info = exon_obj.pb_coverage.replace('\n', '').split(';')
 
 					exon_bam_cov_dict = {}

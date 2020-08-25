@@ -16,14 +16,14 @@ from os import listdir
 from os.path import isfile, join
 from bs4 import BeautifulSoup
 import requests
-
-
+import pandas as pd
 
 # Container Paths
 
 anno_folder = settings.ANNO_FOLDER
 bam_files_dir = settings.BAM_FILES_DIR
 ref_genome_folder = settings.REF_GENOME_FOLDER
+vcf_folder = settings.VARIANT_FOLDER
 custom_anno_folder = anno_folder
 
 
@@ -264,10 +264,10 @@ def sub_graphs(request):
 	return render(request, 'subnet_list.html', {'table_data': subnet_list})
 
 
-def variant_overview(request):
+def variant_network_overview(request):
 
-	gene_graph = nx.read_graphml('processed/test_var_network.xml')
-	genome_graph = nx.read_graphml('processed/test3genome.xml')
+	#gene_graph = nx.read_graphml('processed/test_var_network.xml')
+	#genome_graph = nx.read_graphml('processed/test3genome.xml')
 
 	variant_info = get_variant_info(gene_graph, genome_graph)
 
@@ -276,6 +276,200 @@ def variant_overview(request):
 	#request.session['subnet_data'] = subnet_list
 
 	return render(request, 'variant_info.html', {'table_data': 'this'})
+
+
+def variant_overview(request, variant='default', panel='default'):
+
+	#anno_set_selection = "Exon"
+	#anno_set_selection = "CDS"
+	#anno_set_selection = 'test_1_bed'
+
+	vcf_headder_list = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
+
+	# Get available panels
+
+	panel_obj = list(PanelGeneList.objects.all())
+	panel_list = []
+
+	for gene_panel in panel_obj:
+		panel_list.append(str(gene_panel))
+
+	#gene_list = panel_obj.gene_list.replace('\r\n', '').split(',')
+
+
+	if request.method == 'POST':
+
+		panel_obj = PanelGeneList.objects.get(panel_id=request.POST['panel_selection'])
+
+		# process appropriate vcf
+
+		vcf_file_list = panel_obj.vcf_files.split(',')
+
+		vcf_info_list = []
+
+		gene_list = []
+		var_list = []
+		sample_list = []
+		var_mutations = {}
+
+		for a_vcf_file in vcf_file_list:
+
+			file_name = '_'.join(a_vcf_file.split('.')[:-1])
+
+			vcf_info = input_parser(vcf_folder + a_vcf_file)
+
+			vcf_dict = {
+				'file_name': file_name,
+				'vcf_info': vcf_info
+			}
+
+			vcf_info_list.append(vcf_dict)
+
+		# Find overlaps where vars are in Exons for the panel
+
+		panel_gene_list = panel_obj.gene_list.split(',')
+
+		result_dict = {}
+
+		for a_gene in panel_gene_list:
+
+			# Get transcripts
+
+			gene_obj = GeneInfo.objects.get(gene_id=a_gene)
+
+			gene_chrom = gene_obj.gene_chrom.replace('chr','')
+
+			transcripts = list(TranscriptInfo.objects.filter(gene_info=gene_obj))
+
+			for trans in transcripts:
+				# To the exon level
+
+				trans_exons = list(ExonInfo.objects.filter(transcript_info=trans))
+
+				trans_exons.sort(key=lambda x: x.exon_start)
+
+				for a_exon in trans_exons:
+
+					for a_vcf in vcf_info_list:
+
+						for a_var in a_vcf['vcf_info']:
+
+							# Per variant, per gene
+
+							if str(a_var['CHROM']) == str(gene_chrom):
+
+								if int(a_exon.exon_start) <= int(a_var['POS']) <= int(a_exon.exon_stop):
+
+									# POLD1_AMPL7154402731, chr19, 50 920 347 - 50 920 673
+
+									var_pos = 'pos_' + str(a_var['POS'] + '_chr_' + str(gene_chrom))
+
+									if var_pos not in var_list:
+										var_list.append(var_pos)
+										var_mutations[var_pos] = []
+
+									if a_gene not in gene_list:
+										gene_list.append(a_gene)
+
+									# Also account for multiple samples in a vcf
+
+									for a_sample in a_var.keys():
+
+										# Per variant in the parsed vcf
+
+										if a_sample not in vcf_headder_list:
+
+											# Per sample in the vcf file
+
+											if a_sample not in sample_list:
+												sample_list.append(a_sample)
+
+											# Also check alleles
+
+											ref_allele = a_var['REF']
+											alt_alleles = a_var['ALT'].split(',')
+											all_alleles = [ref_allele] + alt_alleles
+											try:
+												sample_allele = a_var[a_sample]
+											except KeyError:
+												sample_allele = '0/0'
+
+											if sample_allele != '0/0':
+
+												mutation_string = ref_allele + '->' + all_alleles[int(sample_allele.split('/')[0])] + '/' + all_alleles[int(sample_allele.split('/')[1])]
+
+												mut_simple_string_1 = ref_allele + '>' + all_alleles[int(sample_allele.split('/')[0])]
+												mut_simple_string_2 = ref_allele + '>' + all_alleles[int(sample_allele.split('/')[1])]
+
+												if mut_simple_string_1 not in var_mutations[var_pos]:
+													var_mutations[var_pos].append(mut_simple_string_1)
+												if mut_simple_string_2 not in var_mutations[var_pos]:
+													var_mutations[var_pos].append(mut_simple_string_2)
+
+												sample_var_dict = {
+													'quality': a_var['QUAL'],
+													'genotype': sample_allele,
+													'mutation': mutation_string,
+													'gene': a_gene,
+													'info': 'info string'
+												}
+
+												if a_gene not in result_dict.keys():
+
+														# No gene, fresh start
+														result_dict[a_gene] = {var_pos: {'samples': {a_sample: sample_var_dict}, 'effect': a_var['INFO']}}
+												else:
+													if var_pos not in result_dict[a_gene].keys():
+														# Existing gene, new variant position
+														result_dict[a_gene][var_pos] = {'samples': {a_sample: sample_var_dict}, 'effect': a_var['INFO']}
+
+													else:
+														# Existing gene, existing var position, new sample
+														result_dict[a_gene][var_pos]['samples'][a_sample] = sample_var_dict
+
+
+		# Show sample
+
+		df = pd.DataFrame(index=sample_list, columns=var_list)
+
+		for a_gene in result_dict.keys():
+			for a_var in result_dict[a_gene].keys():
+				for a_sample in result_dict[a_gene][a_var]['samples']:
+					df[a_var][a_sample] = result_dict[a_gene][a_var]['samples'][a_sample]['mutation']
+
+		render_table = var_results_to_html_table(result_dict, sample_list)
+
+		variant_info_dict = {
+			'selected': variant,
+			'panel': panel
+		}
+
+		# variation view
+		# <iframe src="https://www.ncbi.nlm.nih.gov/variation/view/?chr=19&q=&assm=GCF_000001405.38&from=87863348&to=87863348" title="Var details" width="100%" height="600"></iframe>
+
+		var_info_block_dict = {}
+
+		for a_var in var_mutations.keys():
+			var_info_block_dict[a_var] = myvariant_html(a_var, var_mutations[a_var])
+
+		return render(request, 'variant_info.html', {
+			'panels': panel_list,
+			'var_table': render_table,
+			'var_detail': variant_info_dict,
+			'var_list': var_info_block_dict
+		}
+			)
+
+	else:
+		# Select which sample to look at
+
+
+		return render(request, 'variant_info.html', {
+			'selected_panel': 'None',
+			'panels': panel_list,
+			'var_detail': variant
+		}
+			)
 
 
 def sub_graph_detail(request):
@@ -648,6 +842,7 @@ def process_sample_coverage(request):
 
 				#print(trans_exons)
 				## First the exons
+				print('Processing Exons')
 
 				for an_exon in trans_exons:
 
@@ -682,6 +877,7 @@ def process_sample_coverage(request):
 					an_exon.save()
 
 					## Then the CDS
+				print('Processing CDS')
 				for a_cds in trans_cds:
 
 					cov_list = ''
@@ -733,6 +929,7 @@ def gene_file_to_db(request):
 
 		selected_file = request.POST['anno_file_selection']
 		selected_bam = request.POST.getlist('bamFiles')
+		selected_vcf = request.POST.getlist('vcfFiles')
 
 		if selected_file.split('.')[-1].lower() == 'bed':
 
@@ -796,6 +993,7 @@ def gene_file_to_db(request):
 			phenotype=request.POST['phenotype'],
 			gene_list=','.join(gene_list),
 			bam_files=','.join(selected_bam),
+			vcf_files=','.join(selected_vcf),
 		)
 		new_panel_obj.save()
 
@@ -810,6 +1008,9 @@ def gene_file_to_db(request):
 		all_bam_files = os.listdir(bam_files_dir)
 		clean_bam_list = []
 
+		all_vcf_files = os.listdir(vcf_folder)
+		clean_vcf_list = []
+
 		allowed_files = ['gff', 'bed', 'gff3']
 
 		for file in all_custom_anno_files:
@@ -820,7 +1021,11 @@ def gene_file_to_db(request):
 			if a_bam[-3:].lower() == 'bam':
 				clean_bam_list.append(a_bam)
 
-		return render(request, 'custom_gene_set_upload.html', {'anno_file_list': custom_anno_files, 'bam_list': clean_bam_list})
+		for a_vcf in all_vcf_files:
+			if a_vcf[-3:].lower() == 'vcf':
+				clean_vcf_list.append(a_vcf)
+
+		return render(request, 'custom_gene_set_upload.html', {'anno_file_list': custom_anno_files, 'bam_list': clean_bam_list, 'vcf_list': clean_vcf_list})
 
 
 def panel_detail_view(request):

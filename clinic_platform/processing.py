@@ -9,6 +9,8 @@ from Bio.Seq import translate
 from os import listdir
 from os.path import isfile, join
 
+import myvariant
+
 
 def subnet2json(in_graph):
 	# data = json.dumps({"nodes": json_data["nodes"], "links": json_data["links"]})
@@ -122,15 +124,12 @@ def input_parser(file_path):
 				vcf_headder_line[-1] = vcf_headder_line[-1].strip()
 
 			if not line.startswith('#'):
+				line = line.strip()
 				entries = line.split('\t')
-				entry_dict = {vcf_headder_line[0]: entries[0], vcf_headder_line[1]: entries[1],
-							  vcf_headder_line[2]: entries[2], vcf_headder_line[3]: entries[3],
-							  vcf_headder_line[4]: entries[4], vcf_headder_line[5]: entries[5],
-							  vcf_headder_line[6]: entries[6], vcf_headder_line[7]: entries[7],
-							  vcf_headder_line[8]: entries[8], vcf_headder_line[9]: entries[9].strip(),
-							  'ORIGIN': entry_label}
+				if len(entries) > 1:
+					entry_dict = dict(zip(vcf_headder_line, entries))
 
-				list_of_dicts.append(entry_dict)
+					list_of_dicts.append(entry_dict)
 		return list_of_dicts
 
 	if file_path[-5:] == ".diff":
@@ -294,6 +293,210 @@ def filter_variants(var_object, q_threshold):
 			pass_list.append(variant)
 
 	return pass_list
+
+
+def var_results_to_html_table(var_result_dict, sample_list):
+	html_table = '<table class="table">'
+
+	ordered_var_list = []
+	ordered_gene_header_list = []
+
+	for a_gene in var_result_dict.keys():
+
+		gene_var_list = []
+		gene_header_list = []
+
+		for a_var in var_result_dict[a_gene].keys():
+			gene_var_list.append(a_var)
+			gene_header_list.append(a_gene)
+
+		gene_var_list.sort()
+
+		padded_gene_var_list = gene_var_list + ['gap']
+		padded_gene_header_list = gene_header_list + ['gap']
+
+		for element in padded_gene_var_list:
+			ordered_var_list.append(element)
+		for element in padded_gene_header_list:
+			ordered_gene_header_list.append(element)
+
+
+	var_result_dict['gap'] = {
+		'info': 'color'
+	}
+
+	# Create header info
+
+	html_table = html_table + '<tr><td></td>'
+	last_gene = ''
+
+	for a_gene in ordered_gene_header_list:
+		if a_gene == 'gap':
+			html_table = html_table + '<td>' + ' - - - ' + '</td>'
+		elif a_gene != last_gene :
+			html_table = html_table + '<td bgcolor="lightblue">' + a_gene + '</td>'
+			last_gene = a_gene
+		else:
+			html_table = html_table + '<td bgcolor="lightblue">' + '</td>'
+
+	html_table = html_table + '</tr>'
+
+	html_table = html_table + '<tr><td></td>'
+
+	for a_var in ordered_var_list:
+		if a_var == 'gap':
+			html_table = html_table + '<td>' + ' - - - ' + '</td>'
+		else:
+			html_table = html_table + '<td><a href="#" class="var_select">' + a_var + '</a></td>'
+
+	html_table = html_table + '</tr>'
+
+	# Fill in the rows
+
+	row_string = ''
+
+	for a_sample in sample_list:
+
+		col_num = 0
+
+		row_string = row_string + '<tr>' + '<td>' + a_sample + '</td>'
+
+		col_string = ''
+
+		while col_num < len(ordered_var_list):
+
+			# Here we are working at a cell level
+
+			try:
+				cell_info = var_result_dict[ordered_gene_header_list[col_num]][ordered_var_list[col_num]]['samples'][a_sample]['mutation']
+				var_effect = var_result_dict[ordered_gene_header_list[col_num]][ordered_var_list[col_num]]['effect']
+			except KeyError:
+
+				cell_info = ''
+
+			try:
+				if 'HIGH' in var_result_dict[ordered_gene_header_list[col_num]][ordered_var_list[col_num]]['effect']:
+					var_effect = 'HIGH'
+				else:
+					var_effect = 'unknown'
+			except KeyError:
+				var_effect = 'NA'
+
+			if var_effect == 'HIGH' and len(cell_info) > 0:
+				col_string = col_string + "<td bgcolor='red'>"
+			else:
+				col_string = col_string + "<td>"
+
+			col_string = col_string + cell_info
+
+			col_string += '</td>'
+
+			col_num += 1
+
+		row_string = row_string + col_string + '</tr>'
+
+	html_table = html_table + row_string + '</table>'
+
+
+	# Info div
+
+
+	return html_table
+
+
+def myvariant_html(var_pos, mutations, genome_reference='hg38'):
+	"""
+
+	:param var_pos: String in the form of pos_50920500_chr_19
+	:param mutations: list of mutations like ['A>C', 'A>A', 'A>G']
+	:return:
+	"""
+	#print(mutations)
+	#print(var_pos)
+
+	html_string = '<table class="varDetails">'
+
+	mv = myvariant.MyVariantInfo()
+
+	var_list = var_pos.split('_')
+
+	var_chr = var_list[2] + var_list[3]
+	var_pos = var_list[1]
+
+	column_headers = ['Ref', 'Alt', 'Effect', 'Conditions', 'Clinical significance', 'RSID', 'RVC']
+
+	row_string = '<thead><tr>'
+
+	for column_header in column_headers:
+		row_string += '<td>' + column_header + '</td>'
+	row_string += '</tr></thead>'
+
+	html_string += row_string
+
+	test_count = 0
+
+	row_string += '<tbody>'
+
+	for a_mutation in mutations:
+
+		var_info_string = ''.join([var_chr, ':g.', var_pos, a_mutation])
+
+		#mutation_info = mv.getvariant(var_info_string, fields='clinvar, snpeff', assembly=genome_reference, as_dataframe=True)
+
+		mutation_info = mv.getvariant('chr1:g.161362951G>A', assembly=genome_reference, fields='clinvar, snpeff')
+
+		if mutation_info is not None:
+
+			test_count += 1
+
+			row_string = '<tr>'
+
+			# Ref allele
+			row_string += '<td>' + str(mutation_info['clinvar']['ref']) + '</td>'
+
+			# Alt allele
+			row_string += '<td>' + str(mutation_info['clinvar']['alt']) + '</td>'
+
+			# SNPEff Effect
+			#print(mutation_info['snpeff'])
+			row_string += '<td>' + mutation_info['snpeff']['ann'][-1]['effect'] + ' ' + mutation_info['snpeff']['ann'][-1]['putative_impact']
+			row_string += '</td>'
+
+			# Conditions
+			row_string += '<td>' + str(mutation_info['clinvar']['rcv']['conditions']['name']) + '</td>'
+
+			# Clinical significance
+			row_string += '<td>' + str(mutation_info['clinvar']['rcv']['clinical_significance']) + '</td>'
+
+			# RSID
+			row_string += '<td>' + str(mutation_info['clinvar']['rcv']['accession']) + '</td>'
+
+			# RVC
+			row_string += '<td><a href=https://www.ncbi.nlm.nih.gov/snp/' + str(mutation_info['clinvar']['rsid']) + '>' + str(mutation_info['clinvar']['rsid']) + '</a></td>'
+
+			row_string += '</tr>'
+			html_string += row_string
+
+		else:
+
+			row_string = '<tr>'
+			# Ref allele
+			row_string += '<td>' + a_mutation.split('>')[0] + '</td>'
+
+			# Alt allele
+			row_string += '<td>' + a_mutation.split('>')[1] + '</td>'
+
+			row_string += '<td>' + 'No clinvar info returned' + '</td>'
+
+			row_string += '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>'
+
+			row_string += '</tr>'
+			html_string += row_string
+
+
+	html_string += '</tbody></table>'
+
+	return html_string
 
 
 def variants2network(in_vcf, in_network, out_gml_location):

@@ -26,7 +26,10 @@ urlpatterns = [
     url(r'^viewGene/(?P<gene_id>\w{0,50})/$', views.gene_view, name='geneView'),
     url(r'^searchGenes/$', views.gene_search, name='geneSearch'),
     url(r'^subNetworks/$', views.sub_graphs, name='subNetworks'),
-    url(r'^varOverview/$', views.variant_overview, name='varOverview'),
+
+    url(r'^varOverview/', views.variant_overview, name='varOverview'),
+    url(r'^varOverview/(?P<variant>\w{0,50})/$', views.variant_overview, name='varOverview'),
+
     url(r'^subNetworks/Subnet_*?', views.sub_graph_detail, name='subNetworkDetail'),
     url(r'^coverageSummaryGene/$', views.coverage_summary_gene, name='coverageSummaryGene'),
     url(r'^coverageSummarySample/$', views.coverage_summary_sample, name='coverageSummarySample'),
@@ -44,3 +47,6 @@ urlpatterns = [
 
 
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+#url(r'^(varOverview/?P<variant>\w+)/$', views.variant_overview, name='varOverview'),
+#url(r'^varOverview/$', views.variant_overview, name='default_varOverview'),

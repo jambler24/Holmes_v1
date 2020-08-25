@@ -1,2 +1,5 @@
-db.sqlite
+*.pyc
+*.DS_Store
+
+
 

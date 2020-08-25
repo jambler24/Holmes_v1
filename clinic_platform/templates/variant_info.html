@@ -1,14 +1,84 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-<h1>Info on variants</h1>
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<script>
+    $(document).on("click", ".var_select", function(e) {
+        {% for key, values in var_list.items %}
+    if ($(this).text() == "{{key}}"){
+        $("#var_detail").html('{{values | safe}}');
+    }
+        {% endfor %}
+        return false;
+});
+
+</script>
+
+<h2>Select settings and sample</h2>
+
+
+<form action="" method="post">
+    {% csrf_token %}
+
+    <label for="panel_selection">Panel: </label>
+    <select id="panel_selection" name="panel_selection">
+
+        {% for panel in panels %}
+            <option value="{{panel}}">{{panel}}</option>
+        {% endfor %}
+
+    </select>
+
+    <br>
+
+    <input type="submit" value="OK">
+</form>
+
+
+<div id="table1">
+    <h2>Variant info</h2>
+
+    <div>
+
+        <h3>Details</h3>
+
+        <div id="var_detail">
+            Old text
+        </div>
 
 
 
+    </div>
 
-</body>
-</html>
+
+    <h3>Panel: {{transcript_name}}</h3>
+
+    <table id="myTable">
+        <tr>
+            {% for info in gene_info.name %}
+                <th>{{info}}</th>
+            {% endfor %}
+
+        </tr>
+
+        <tr>
+            {% for info_2 in gene_info.info_1 %}
+                <th>{{info_2}}</th>
+            {% endfor %}
+        </tr>
+
+    </table>
+
+{{var_table| safe}}
+
+</div>
+
+<br>
+<br>
+
+
+{% endblock %}

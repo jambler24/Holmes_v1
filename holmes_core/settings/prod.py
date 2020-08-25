@@ -16,4 +16,5 @@ DATABASES = {
 ANNO_FOLDER = '/annotations/'
 BAM_FILES_DIR = '/bam_files/'
 REF_GENOME_FOLDER = '/ref_genome/'
+VARIANT_FOLDER = '/variant_files/'
 

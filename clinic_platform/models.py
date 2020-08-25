@@ -55,6 +55,8 @@ class PanelGeneList(models.Model):
 
 	bam_files = models.TextField(max_length=2000, default='None')
 
+	vcf_files = models.TextField(max_length=2000, default='NA')
+
 	comparison = models.CharField(max_length=160, default='None')
 
 	last_threshold = models.IntegerField(default=-1)

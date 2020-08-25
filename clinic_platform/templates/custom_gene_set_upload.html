@@ -6,7 +6,7 @@
 
 {% load static %}
 
-<h2>Select settings and sample</h2>
+<h2>Create new panel</h2>
 
 
 <form action="" method="post">
@@ -33,6 +33,13 @@
     Bam file list:<br>
     {% for bam in bam_list %}
     <input type="checkbox" name="bamFiles" value="{{bam}}">{{bam}}<br>
+    {% endfor %}
+    <br>
+
+    <br>
+    VCF file list:<br>
+    {% for vcf in vcf_list %}
+    <input type="checkbox" name="vcfFiles" value="{{vcf}}">{{vcf}}<br>
     {% endfor %}
     <br>
 

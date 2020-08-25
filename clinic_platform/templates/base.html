@@ -7,6 +7,7 @@
 
     <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
 
@@ -21,7 +22,7 @@
     <div class="dropdown-content">
       <a href="{% url 'geneListInput' %}">Add gene list</a>
       <a href="{% url 'genelist2db' %}">genelist2db</a>
-      <a href="{% url 'geneFileToDB' %}">Add custom annotation</a>
+      <a href="{% url 'geneFileToDB' %}">Add custom panel</a>
       <a href="{% url 'panelDetails' %}">Panel details</a>
     </div>
   </div>
@@ -43,6 +44,17 @@
     <div class="dropdown-content">
       <a href="{% url 'addExperiment' %}">Add experiment</a>
       <a href="{% url 'addExpressionData' %}">Add expression data</a>
+    </div>
+
+  </div>
+
+
+  <div class="dropdown">
+    <button class="dropbtn">Variant info
+      <i class="fa fa-caret-down"></i>
+    </button>
+    <div class="dropdown-content">
+      <a href="{% url 'varOverview' %}">Gene panel</a>
     </div>
 
   </div>
