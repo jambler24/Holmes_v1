@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<h1>Help</h1>
+
+<h2>VCFs and panels</h2>
+
+
+<h3>How associate a VCF with the panel</h3>
+
+<ul>
+    <li>Place the VCF files in the variant_files directory</li>
+    <li>Navigate to the "Input" tab</li>
+    <li>Select "Add VCF to panel</li>
+    <li>Select the panel you would like the VCF associated with</li>
+    <li>Select the VCF file(s) you would like to associate with the panel</li>
+</ul>
+
+
+<h3>Additional info</h3>
+
+VCFs can be associated with multiple panels, each considering the variants only found in their corresponding genes.
+
+{% endblock %}

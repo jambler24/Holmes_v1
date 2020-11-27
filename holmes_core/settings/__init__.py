@@ -1,4 +1,5 @@
 from .base import *
+import os
 # you need to set "myproject = 'prod'" as an environment variable
 # in your OS (on which your website is hosted)
 
@@ -10,10 +11,7 @@ else:
 
 '''
 
-run_mode = 'dev'
-
-if run_mode == 'prod':
+if os.environ.get('DJANGO_CONFIGURATION') == 'prod':
 	from .prod import *
 else:
 	from .dev import *
-

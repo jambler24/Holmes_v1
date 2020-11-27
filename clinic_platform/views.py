@@ -3,6 +3,8 @@ from django.shortcuts import render
 from django.conf import settings
 from django.shortcuts import redirect
 from django.core.files.storage import FileSystemStorage
+from django.db.models import Q
+
 import json
 import os
 import networkx as nx
@@ -88,6 +90,12 @@ def uploads(request):
 
 
 def gene_list_input(request):
+	"""
+	This takes in a comma seperated list of genes and adds them to the database.
+
+	:param request:
+	:return:
+	"""
 
 	if request.method == 'POST':
 		# Extract info
@@ -113,6 +121,8 @@ def gene_list_input(request):
 			panel_val = form.cleaned_data['panel_id']
 
 			in_file_path = ref_genome_folder + ref_genome_gff
+
+			print(panel_val)
 
 			import_result = subset_gff_to_db(in_file_path, panel_val)
 
@@ -264,6 +274,39 @@ def sub_graphs(request):
 	return render(request, 'subnet_list.html', {'table_data': subnet_list})
 
 
+def add_vcf_to_panel(request):
+	if request.method == 'POST':
+
+		# Alter associated VCFs for the selected panel
+
+		a_panel = request.POST['panel_selection']
+
+		selected_vcfs = request.POST.getlist('vcfFiles')
+
+		vcf_string = ','.join(selected_vcfs)
+
+		PanelGeneList.objects.filter(panel_id=a_panel).update(vcf_files=vcf_string)
+
+		return redirect('/')
+
+	else:
+		all_vcf_files = os.listdir(vcf_folder)
+		clean_vcf_list = []
+
+		for a_vcf in all_vcf_files:
+			if a_vcf[-3:].lower() == 'vcf':
+				clean_vcf_list.append(a_vcf)
+
+		gene_panels = PanelGeneList.objects.values_list('panel_id', flat=True)
+
+
+		return render(request, 'add_vcf_to_panel.html', {'vcf_list': clean_vcf_list, 'gene_panels': gene_panels})
+
+
+
+
+
+
 def variant_network_overview(request):
 
 	#gene_graph = nx.read_graphml('processed/test_var_network.xml')
@@ -279,6 +322,13 @@ def variant_network_overview(request):
 
 
 def variant_overview(request, variant='default', panel='default'):
+	"""
+
+	:param request:
+	:param variant:
+	:param panel:
+	:return:
+	"""
 
 	#anno_set_selection = "Exon"
 	#anno_set_selection = "CDS"
@@ -302,8 +352,20 @@ def variant_overview(request, variant='default', panel='default'):
 		panel_obj = PanelGeneList.objects.get(panel_id=request.POST['panel_selection'])
 
 		# process appropriate vcf
-
 		vcf_file_list = panel_obj.vcf_files.split(',')
+
+		#print(vcf_file_list)
+
+		if vcf_file_list[0] == 'NA':
+
+			return render(request, 'variant_info.html', {
+				'selected_panel': 'no vcf',
+				'panels': panel_list,
+				'var_detail': variant,
+				'transcript_name': 'no vcf'
+				}
+			)
+
 
 		vcf_info_list = []
 
@@ -311,6 +373,8 @@ def variant_overview(request, variant='default', panel='default'):
 		var_list = []
 		sample_list = []
 		var_mutations = {}
+
+		# Parse the associated vcf files
 
 		for a_vcf_file in vcf_file_list:
 
@@ -325,17 +389,26 @@ def variant_overview(request, variant='default', panel='default'):
 
 			vcf_info_list.append(vcf_dict)
 
+		#print(vcf_info_list)
+
 		# Find overlaps where vars are in Exons for the panel
 
 		panel_gene_list = panel_obj.gene_list.split(',')
+
+		print(panel_gene_list)
 
 		result_dict = {}
 
 		for a_gene in panel_gene_list:
 
 			# Get transcripts
+			a_gene = a_gene.strip()
 
-			gene_obj = GeneInfo.objects.get(gene_id=a_gene)
+			print(a_gene)
+
+			#TODO: This can return multiple GeneInfo objects if genes with different gene_id have the same gene_name
+			gene_obj = GeneInfo.objects.get(Q(gene_id=a_gene) | Q(gene_name=a_gene))
+
 
 			gene_chrom = gene_obj.gene_chrom.replace('chr','')
 
@@ -356,7 +429,13 @@ def variant_overview(request, variant='default', panel='default'):
 
 							# Per variant, per gene
 
-							if str(a_var['CHROM']) == str(gene_chrom):
+							# Make sure it is a string, with no chr
+							var_chrom = str(a_var['CHROM'].replace('chr',''))
+							var_chrom = var_chrom.replace('Chr', '')
+
+							#print(var_chrom, gene_chrom)
+
+							if var_chrom == str(gene_chrom):
 
 								if int(a_exon.exon_start) <= int(a_var['POS']) <= int(a_exon.exon_stop):
 
@@ -450,13 +529,18 @@ def variant_overview(request, variant='default', panel='default'):
 		var_info_block_dict = {}
 
 		for a_var in var_mutations.keys():
-			var_info_block_dict[a_var] = myvariant_html(a_var, var_mutations[a_var])
+			var_info_block_dict[a_var], myvar_info = myvariant_html(a_var, var_mutations[a_var])
+
+		# Load info from MyVariant run into the info dict
+		for key, value in myvar_info.items():
+			variant_info_dict[key] = value
 
 		return render(request, 'variant_info.html', {
 			'panels': panel_list,
 			'var_table': render_table,
 			'var_detail': variant_info_dict,
-			'var_list': var_info_block_dict
+			'var_list': var_info_block_dict,
+			'selected_panel': panel_obj
 		}
 			)
 
@@ -679,6 +763,8 @@ def coverage_summary_sample(request):
 		# q_gene = request.POST['a_gene_selection']
 		#cov_threshold = int(request.POST['coverage_threshold'])
 
+		error_list = []
+
 		anno_set_selection = request.POST['set_selection']
 
 		selected_level = request.POST['set_level']
@@ -702,31 +788,36 @@ def coverage_summary_sample(request):
 
 			gene_cov_result = cov_tools.calc_average_gene_coverage_info(a_gene, bam_file_list, level=selected_level)
 
-			print(gene_cov_result)
+			#print(gene_cov_result)
+			# Check to see if the gene was found
+			if isinstance(gene_cov_result, str):
+				error_list.append(gene_cov_result)
 
-			table_matrix[a_gene] = []
+			else:
 
-			for a_trans in gene_cov_result.keys():
+				table_matrix[a_gene] = []
 
-				# This is the first column of the row
-				gene_cot_row = [{'cot': a_trans, 'avc': a_trans, 'cot_perc': 0}]
+				for a_trans in gene_cov_result.keys():
 
-				print(a_trans)
+					# This is the first column of the row
+					gene_cot_row = [{'cot': a_trans, 'avc': a_trans, 'cot_perc': 0}]
 
-				sample_list = []
+					#print(a_trans)
 
-				for filename in bam_file_list:
-					sample_list.append(filename.split('.')[0])
+					sample_list = []
 
-				for a_sample in sample_list:
+					for filename in bam_file_list:
+						sample_list.append(filename.split('.')[0])
 
-					print(a_sample)
+					for a_sample in sample_list:
 
-					sample_cot_row = [{'cot': gene_cov_result[a_trans][a_sample]['percentage_over_cov_thres'], 'avc': gene_cov_result[a_trans][a_sample]['average_coverage'], 'cot_perc': gene_cov_result[a_trans][a_sample]['percentage_over_cov_thres_perc']}]
+						#print(a_sample)
 
-					gene_cot_row = gene_cot_row + sample_cot_row
+						sample_cot_row = [{'cot': gene_cov_result[a_trans][a_sample]['percentage_over_cov_thres'], 'avc': gene_cov_result[a_trans][a_sample]['average_coverage'], 'cot_perc': gene_cov_result[a_trans][a_sample]['percentage_over_cov_thres_perc']}]
 
-				table_matrix[a_gene].append(gene_cot_row)
+						gene_cot_row = gene_cot_row + sample_cot_row
+
+					table_matrix[a_gene].append(gene_cot_row)
 
 		cov_threshold = panel_obj.last_threshold
 
@@ -734,9 +825,8 @@ def coverage_summary_sample(request):
 
 		view_info = {'cov_threshold': cov_threshold, 'anno_file': anno_set_selection}
 
-		print(table_matrix)
 
-		return render(request, 'coverage_summary_samples.html', {'gene_list': gene_list, 'sample_list': sample_list, 'cot_matrix': table_matrix, 'view_info': view_info})
+		return render(request, 'coverage_summary_samples.html', {'gene_list': gene_list, 'sample_list': sample_list, 'cot_matrix': table_matrix, 'view_info': view_info, 'error_list': error_list})
 
 	else:
 
@@ -1058,7 +1148,7 @@ def panel_detail_view(request):
 			# look in DB
 
 			try:
-				gene_obj = GeneInfo.objects.get(gene_id=a_gene)
+				gene_obj = GeneInfo.objects.get(Q(gene_id=a_gene) | Q(gene_name=a_gene))
 			except:
 				res_dict['db'] = 'Not found'
 			else:
@@ -1177,6 +1267,15 @@ def add_expression_data(request):
 			'experiments': experiment_list
 			}
 		)
+
+
+
+def help_panel_input(request):
+	return render(request, "helppages/panel_input_help.html")
+
+
+def help_vcf_input(request):
+	return render(request, "helppages/vcf_input_help.html")
 
 
 def help_gene_input(request):

@@ -28,6 +28,9 @@ import math
 import pysam
 from os import listdir
 from os.path import isfile, join
+from django.core.exceptions import ObjectDoesNotExist
+
+
 
 from clinic_platform.models import Experiment, CurrentSettings, PanelGeneList, TranscriptInfo, GeneInfo, CDSInfo, ExonInfo
 
@@ -296,7 +299,7 @@ def calc_average_gene_coverage_info(a_gene, bam_file_list, level="exon"):
 
 	try:
 		gene_obj = GeneInfo.objects.get(gene_id=a_gene)
-	except DoesNotExist:
+	except ObjectDoesNotExist:
 		return 'gene ' + str(a_gene) + ' not found'
 
 	for a_bam_file in bam_file_list:

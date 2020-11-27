@@ -22,6 +22,8 @@ DATABASES = {
 
 # local dev paths
 
+print('Dev mode on')
+
 ANNO_FOLDER = '/Users/panix/Library/Mobile Documents/com~apple~CloudDocs/programs/Holmes/Docker_things/annotations/'
 BAM_FILES_DIR = '/Users/panix/Library/Mobile Documents/com~apple~CloudDocs/programs/Holmes/Docker_things/bam_files/'
 REF_GENOME_FOLDER = '/Users/panix/Library/Mobile Documents/com~apple~CloudDocs/programs/Holmes/Docker_things/ref_genome/'

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<h2>Modify VCF to panel</h2>
+
+<div>
+
+    <p>
+        Change the VCF files associated with an existing panel
+    </p>
+
+<form action="" method="post">
+    {% csrf_token %}
+    <label for="panel_selection">Panel: </label>
+    <select id="panel_selection" name="panel_selection">
+
+        {% for panel in gene_panels %}
+            <option value="{{panel}}">{{panel}}</option>
+        {% endfor %}
+
+    </select>
+
+    <br>
+    <br>
+    VCF file list:<br>
+    {% for vcf in vcf_list %}
+    <input type="checkbox" name="vcfFiles" value="{{vcf}}">{{vcf}}<br>
+    {% endfor %}
+    <br>
+
+    <input type="submit" value="OK">
+</form>
+
+</div>
+
+{% endblock %}

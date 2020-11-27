@@ -47,7 +47,11 @@
         <h3>Details</h3>
 
         <div id="var_detail">
-            Old text
+            <table id="myTable">
+                {% for info in run_info %}
+                    <tr><th>{{info}}</th></tr>
+                {% endfor %}
+            </table>
         </div>
 
 
@@ -55,7 +59,7 @@
     </div>
 
 
-    <h3>Panel: {{transcript_name}}</h3>
+    <h3>Panel: {{selected_panel}}</h3>
 
     <table id="myTable">
         <tr>

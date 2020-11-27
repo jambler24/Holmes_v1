@@ -8,6 +8,7 @@ from GenGraph import *
 from Bio.Seq import translate
 from os import listdir
 from os.path import isfile, join
+import requests
 
 import myvariant
 
@@ -409,10 +410,15 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 
 	:param var_pos: String in the form of pos_50920500_chr_19
 	:param mutations: list of mutations like ['A>C', 'A>A', 'A>G']
+	:param genome_reference:
 	:return:
 	"""
 	#print(mutations)
 	#print(var_pos)
+
+	request_info = {}
+
+	mutation_info = None
 
 	html_string = '<table class="varDetails">'
 
@@ -441,9 +447,15 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 
 		var_info_string = ''.join([var_chr, ':g.', var_pos, a_mutation])
 
-		#mutation_info = mv.getvariant(var_info_string, fields='clinvar, snpeff', assembly=genome_reference, as_dataframe=True)
+		try:
+			mutation_info = mv.getvariant(var_info_string, fields='clinvar, snpeff', assembly=genome_reference, as_dataframe=True)
+		except requests.HTTPError as exception:
+			print(exception)
+			request_info = {'myvariant_error': 'My variant was not able to retrieve data.'}
 
-		mutation_info = mv.getvariant('chr1:g.161362951G>A', assembly=genome_reference, fields='clinvar, snpeff')
+		#mutation_info = mv.getvariant('chr1:g.161362951G>A', assembly='hg38', fields='clinvar, snpeff')
+
+		print(mutation_info)
 
 		if mutation_info is not None:
 
@@ -463,6 +475,17 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 			row_string += '</td>'
 
 			# Conditions
+			#TODO: MyVariant can return a list, or a dict. Need to deal with either
+			print(mutation_info['clinvar']['rcv'])
+
+
+			#quit()
+			if type(mutation_info['clinvar']['rcv']) is list:
+				for rcv_data in mutation_info['clinvar']['rcv']:
+
+					print(rcv_data['conditions'])
+
+
 			row_string += '<td>' + str(mutation_info['clinvar']['rcv']['conditions']['name']) + '</td>'
 
 			# Clinical significance
@@ -496,7 +519,7 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 
 	html_string += '</tbody></table>'
 
-	return html_string
+	return html_string, request_info
 
 
 def variants2network(in_vcf, in_network, out_gml_location):
@@ -598,10 +621,10 @@ def extract_subnets(in_graph_obj, condition='all'):
 				var_nodes += 1
 
 		set_result = {'label': 'Subnet_' + str(count),
-					  	'node_count': len(gene_set),
+						'node_count': len(gene_set),
 						'qval_prod': qval_product(gene_set, in_graph_obj, condition),
 						'nodes': list(gene_set),
-					  	'variants': var_nodes
+						'variants': var_nodes
 					  }
 		list_of_results.append(set_result)
 		count += 1
@@ -1144,6 +1167,13 @@ def subset_gff_to_db_old(in_file_path, requested_panel_id, level='exon'):
 
 
 def subset_gff_to_db(in_file_path, requested_panel_id):
+	"""
+	:param in_file_path:
+	:param requested_panel_id:
+	:return:
+	"""
+
+	# TODO CHeck if the gene is already added, record which assembly!!!
 
 	gene_list_obj = PanelGeneList.objects.get(panel_id=requested_panel_id)
 
@@ -1151,9 +1181,12 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 
 	gene_list = gene_list.split(',')
 
+	found_genes = []
+	found_mRNA = []
+
 	testing_chroms = False
 
-	result_dict = {'in_set_len': len(gene_list), 'imported_genes': 0}
+	result_dict = {'in_set_len': len(gene_list), 'imported_genes': 0, 'found_genes': 0}
 
 	file_obj = open(in_file_path, 'r')
 
@@ -1189,6 +1222,7 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 
 		# First pass of file to get gene names and ID
 		transcript_list = []
+		new_gene_id_list = []
 
 		for line in file_obj:
 			if line[0] != '#':
@@ -1202,12 +1236,11 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 					gene_chrom = line_list[0]
 
 				if line_list[2] == 'gene':
-
+					# We are looking at the gene level
 					orientation = line_list[6]
 					gene_name = ''
 					gene_ID = ''
 					gene_description = ''
-					result_dict['imported_genes'] = result_dict['imported_genes'] + 1
 
 					for info_bite in line_list[8].split(';'):
 						if info_bite.split('=')[0] == 'Name':
@@ -1217,8 +1250,22 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 						if info_bite.split('=')[0] == 'description':
 							gene_description = info_bite.split('=')[1]
 
-					if gene_ID.replace('gene:', '') in gene_list:
+					# Search by gene ID and gene name
+					if gene_ID.replace('gene:', '') in gene_list or gene_name in gene_list:
+						found_genes.append(gene_name)
+						print('Match', gene_name, gene_ID.replace('gene:', ''))
+						result_dict['found_genes'] = result_dict['found_genes'] + 1
+
+						print(line_list[8].split(';'))
+						print(gene_ID)
+						print(gene_description)
+						print(gene_name)
+						print(line)
+						print('-----------------------')
+
+						# Check if the gene has already been added to the DB Gene Info table
 						if not GeneInfo.objects.filter(gene_id=gene_ID.replace('gene:', '')).exists():
+							print('Save new gene', gene_name)
 							new_gene = GeneInfo(
 								gene_id=gene_ID.replace('gene:', ''),
 								gene_name=gene_name,
@@ -1226,7 +1273,12 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 								gene_chrom=gene_chrom
 							)
 							new_gene.save()
+							result_dict['imported_genes'] = result_dict['imported_genes'] + 1
 
+							# If the gene is new, add the ID to this list so the mRNA will be added
+							new_gene_id_list.append(gene_ID)
+
+				# Get the mRNA associated with the gene. This normally follows the gene entry line.
 				if line_list[2] == 'mRNA':
 					for info_bite in line_list[8].split(';'):
 						if info_bite.split('=')[0] == 'Parent':
@@ -1234,13 +1286,15 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 						if info_bite.split('=')[0] == 'ID':
 							transcript_ID = info_bite.split('=')[1].replace('id', '')
 
-					if parent.replace('gene:', '') in gene_list:
+					#TODO This will miss if the gene name, not ID was provided. Add both to new list?
+					# Check if parent gene in the gene info table?
+					if parent in new_gene_id_list:
 						gene_ID_obj = GeneInfo.objects.get(gene_id=parent.replace('gene:', ''))
 						transcript_list.append(transcript_ID.replace('transcript:', ''))
 						if not TranscriptInfo.objects.filter(transcript_id=transcript_ID.replace('transcript:', '')).exists():
+							print('Save new mRNA', transcript_ID.replace('transcript:', ''))
 							new_transcript = TranscriptInfo(gene_info=gene_ID_obj,
 															transcript_id=transcript_ID.replace('transcript:', ''))
-
 							new_transcript.save()
 
 		# Second pass for features
@@ -1263,11 +1317,16 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 							parent = info_bite.split('=')[1].replace('transcript:', '')
 						if info_bite.split('=')[0] == 'Name':
 							exon_name = info_bite.split('=')[1]
+						else:
+							exon_name = info_bite.split('=')[1].replace('transcript:', '')
 
 					if parent.replace('transcript:', '') in transcript_list:
 
 						exon_start = line_list[3]
 						exon_stop = line_list[4]
+
+						print('Exon found for', parent)
+						print(line_list)
 
 						if not ExonInfo.objects.filter(exon_id=exon_name, exon_start=exon_start, exon_stop=exon_stop).exists():
 							transcript_id_obj = TranscriptInfo.objects.get(transcript_id=parent.replace('transcript:', ''))
@@ -1294,6 +1353,10 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 							cds_start = line_list[3]
 							cds_stop = line_list[4]
 
+							print('CDS found for', parent.replace('transcript:', ''))
+
+							print(cds_id)
+
 							if not CDSInfo.objects.filter(cds_id=cds_id, cds_start=cds_start, cds_stop=cds_stop).exists():
 
 								cds_frame = line_list[7]
@@ -1308,6 +1371,9 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 									transcript_info=transcript_id_obj
 								)
 								new_cds.save()
+	print(gene_list)
+	print(found_genes)
+	print(transcript_list)
 
 	return result_dict
 

@@ -23,6 +23,7 @@
       <a href="{% url 'geneListInput' %}">Add gene list</a>
       <a href="{% url 'genelist2db' %}">genelist2db</a>
       <a href="{% url 'geneFileToDB' %}">Add custom panel</a>
+      <a href="{% url 'addPanelVCF' %}">Add VCF to panel</a>
       <a href="{% url 'panelDetails' %}">Panel details</a>
     </div>
   </div>
@@ -75,6 +76,8 @@
       <i class="fa fa-caret-down"></i>
     </button>
     <div class="dropdown-content">
+      <a href="{% url 'helpPanelInput' %}">Panel input</a>
+      <a href="{% url 'helpVCFInput' %}">VCF input</a>
       <a href="{% url 'helpGeneInput' %}">Gene input</a>
     </div>
   </div>

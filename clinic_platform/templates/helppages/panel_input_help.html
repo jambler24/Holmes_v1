@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<h1>Help</h1>
+
+<h2>Whats is a panel?</h2>
+
+A panel is a selection of genes and their associated data in the form of files (VCF & BAM) and metadata (phenotype)
+
+This allows you to only consider certain information in your analysis, avoiding incidental findings.
+
+<h3>Creating a new panel</h3>
+
+<ul>
+    <li>Creating the panel by selecting the genes</li>
+    <li>Associating files to the panel</li>
+    <li>Running an analysis on the panel</li>
+</ul>
+
+<h3>If you want to extract a subset of genes from the organisms genome</h3>
+
+
+{% endblock %}

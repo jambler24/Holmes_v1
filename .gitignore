@@ -1,5 +1,7 @@
+
 *.pyc
 *.DS_Store
-
-
+holmes_core/.DS_Store
+clinic_platform/templates/.DS_Store
+.DS_Store
 

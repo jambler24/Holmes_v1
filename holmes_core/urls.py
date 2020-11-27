@@ -21,14 +21,20 @@ from django.conf import settings
 from clinic_platform import views
 
 urlpatterns = [
+    # Vanilla
     url(r'^$', views.home, name='home'),
+
     url(r'^uploads/$', views.uploads, name='uploads'),
     url(r'^viewGene/(?P<gene_id>\w{0,50})/$', views.gene_view, name='geneView'),
     url(r'^searchGenes/$', views.gene_search, name='geneSearch'),
     url(r'^subNetworks/$', views.sub_graphs, name='subNetworks'),
 
+    # Variant views
     url(r'^varOverview/', views.variant_overview, name='varOverview'),
     url(r'^varOverview/(?P<variant>\w{0,50})/$', views.variant_overview, name='varOverview'),
+
+    # Add panel views
+    url(r'^addPanelVCF/$', views.add_vcf_to_panel, name='addPanelVCF'),
 
     url(r'^subNetworks/Subnet_*?', views.sub_graph_detail, name='subNetworkDetail'),
     url(r'^coverageSummaryGene/$', views.coverage_summary_gene, name='coverageSummaryGene'),
@@ -43,8 +49,11 @@ urlpatterns = [
     url('panelDetails/$', views.panel_detail_view, name='panelDetails'),
     url('addExperiment/$', views.add_experiment, name='addExperiment'),
     url('addExpressionData/$', views.add_expression_data, name='addExpressionData'),
-    url('helpGeneInput/$', views.help_gene_input, name='helpGeneInput'),
 
+    # Help pages
+    url('helpGeneInput/$', views.help_gene_input, name='helpGeneInput'),
+    url('helpVCFInput/$', views.help_vcf_input, name='helpVCFInput'),
+    url('helpPanelInput/$', views.help_panel_input, name='helpPanelInput'),
 
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
