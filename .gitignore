@@ -4,4 +4,7 @@
 holmes_core/.DS_Store
 clinic_platform/templates/.DS_Store
 .DS_Store
+db.sqlite3
+*.icloud
+*.zip
 
