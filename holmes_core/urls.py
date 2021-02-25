@@ -54,6 +54,8 @@ urlpatterns = [
     url('helpGeneInput/$', views.help_gene_input, name='helpGeneInput'),
     url('helpVCFInput/$', views.help_vcf_input, name='helpVCFInput'),
     url('helpPanelInput/$', views.help_panel_input, name='helpPanelInput'),
+    url('helpVariantWorkflow/$', views.help_variant_workflow, name='helpVariantWorkflow'),
+
 
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

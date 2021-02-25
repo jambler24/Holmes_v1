@@ -485,7 +485,7 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 					row_string += '</td>'
 
 					# Conditions
-					print(rcv_data)
+					#print(rcv_data)
 					if type(rcv_data['conditions']) is list:
 						row_string += '<td>' + str(rcv_data['conditions'][0]['name']) + '</td>'
 					else:

@@ -24,5 +24,19 @@ This allows you to only consider certain information in your analysis, avoiding 
 
 <h3>If you want to extract a subset of genes from the organisms genome</h3>
 
+This is useful if you have a list of genes and wish to use them as a panel. This will extract the associated
+transcripts, and exons.
+
+<ul>
+    <li>Place the reference gff file in the "ref_genome" folder</li>
+    <li>Select "Gene input", then "Add gene list"</li>
+    <li>Provide a panel id (just a name for the panel) and any phenotype information</li>
+    <li>Add genes to the "Gene list" window, using the gene names as used in the reference gff</li>
+    <li>Select any bam files associated with this panel if applicable (for coverage calculations)</li>
+    <li>Select the annotation gff file from the drop down menu</li>
+    <li>Click submit</li>
+</ul>
+
+
 
 {% endblock %}

@@ -43,7 +43,14 @@ def get_region_coverage_info(bam_file_path, start_pos, stop_pos, chr_name, thres
 
 	samfile = pysam.AlignmentFile(bam_file_path, "rb")
 
-	iter = samfile.pileup(chr_name, int(start_pos), int(stop_pos))
+	try:
+		iter = samfile.pileup(chr_name, int(start_pos), int(stop_pos))
+	except ValueError:
+
+		chr_name = "chr" + chr_name
+
+		iter = samfile.pileup(chr_name, int(start_pos), int(stop_pos))
+
 
 	data_mapped = {}
 	x_data = []
@@ -290,7 +297,7 @@ def calc_average_gene_coverage_info_old(anno_file_path, a_gene, bam_file_dir, th
 	return cov_info
 
 
-def calc_average_gene_coverage_info(a_gene, bam_file_list, level="exon"):
+def calc_average_gene_coverage_info(a_gene, bam_file_list, level="exon", rounding=True):
 	'''
 	This may be bugged because of different chromosomes.
 	probs fixed
@@ -367,9 +374,14 @@ def calc_average_gene_coverage_info(a_gene, bam_file_list, level="exon"):
 
 				percentage_of_gene_covered_over_threshold = 100.0 / len(transcript_base_coverage_list) * bases_over_threshold
 
-				cov_info[a_transcript.transcript_id][sample_name]['average_coverage'] = average(transcript_base_coverage_list)
-				cov_info[a_transcript.transcript_id][sample_name]['percentage_over_cov_thres'] = percentage_of_gene_covered_over_threshold
-				cov_info[a_transcript.transcript_id][sample_name]['percentage_over_cov_thres_perc'] = cov_info[a_transcript.transcript_id][sample_name]['percentage_over_cov_thres'] / 100.0
+				if rounding:
+					cov_info[a_transcript.transcript_id][sample_name]['average_coverage'] = round(average(transcript_base_coverage_list))
+					cov_info[a_transcript.transcript_id][sample_name]['percentage_over_cov_thres'] = round(percentage_of_gene_covered_over_threshold)
+					cov_info[a_transcript.transcript_id][sample_name]['percentage_over_cov_thres_perc'] = round(cov_info[a_transcript.transcript_id][sample_name]['percentage_over_cov_thres'] / 100.0)
+				else:
+					cov_info[a_transcript.transcript_id][sample_name]['average_coverage'] = average(transcript_base_coverage_list)
+					cov_info[a_transcript.transcript_id][sample_name]['percentage_over_cov_thres'] = percentage_of_gene_covered_over_threshold
+					cov_info[a_transcript.transcript_id][sample_name]['percentage_over_cov_thres_perc'] = cov_info[a_transcript.transcript_id][sample_name]['percentage_over_cov_thres'] / 100.0
 
 	return cov_info
 

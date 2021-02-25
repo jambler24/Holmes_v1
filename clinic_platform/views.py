@@ -334,6 +334,9 @@ def variant_overview(request, variant='default', panel='default'):
 	#anno_set_selection = "CDS"
 	#anno_set_selection = 'test_1_bed'
 
+	#TODO: properly set this
+	reference_genome = "hg38"
+
 	vcf_headder_list = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
 
 	# Get available panels
@@ -395,7 +398,7 @@ def variant_overview(request, variant='default', panel='default'):
 
 		panel_gene_list = panel_obj.gene_list.split(',')
 
-		print(panel_gene_list)
+		#print(panel_gene_list)
 
 		result_dict = {}
 
@@ -529,7 +532,7 @@ def variant_overview(request, variant='default', panel='default'):
 		var_info_block_dict = {}
 
 		for a_var in var_mutations.keys():
-			var_info_block_dict[a_var], myvar_info = myvariant_html(a_var, var_mutations[a_var])
+			var_info_block_dict[a_var], myvar_info = myvariant_html(a_var, var_mutations[a_var], genome_reference=reference_genome)
 
 		# Load info from MyVariant run into the info dict
 		for key, value in myvar_info.items():
@@ -753,7 +756,7 @@ def coverage_summary_gene(request):
 def coverage_summary_sample(request):
 
 	"""
-	This is the view for looking at the average coverage for all samples.
+	This is the view for looking at the average coverage for all regions, all samples.
 	:param request:
 	:return:
 	"""
@@ -1280,4 +1283,9 @@ def help_vcf_input(request):
 
 def help_gene_input(request):
 	return render(request, "helppages/gene_input_help.html")
+
+
+def help_variant_workflow(request):
+	return render(request, "helppages/variant_workflow.html")
+
 
