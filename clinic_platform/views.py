@@ -311,12 +311,13 @@ def variant_network_overview(request):
     return render(request, 'variant_info.html', {'table_data': 'this'})
 
 
-def variant_overview(request, variant='default', panel='default'):
+def variant_overview(request, variant='default', panel='default', reference_genome='hg19'):
     """
 
     :param request:
     :param variant:
     :param panel:
+    :param reference_genome: hg38 / hg19
     :return:
     """
 
@@ -324,8 +325,6 @@ def variant_overview(request, variant='default', panel='default'):
     # anno_set_selection = "CDS"
     # anno_set_selection = 'test_1_bed'
 
-    # TODO: properly set this
-    reference_genome = "hg38"
 
     vcf_headder_list = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
 
@@ -455,7 +454,12 @@ def variant_overview(request, variant='default', panel='default'):
                                             alt_alleles = a_var['ALT'].split(',')
                                             all_alleles = [ref_allele] + alt_alleles
                                             try:
-                                                sample_allele = a_var[a_sample]
+                                                # Split last column based on FORMAT for the sample
+                                                format_list = a_var['FORMAT'].split(':')
+                                                sample_format_list = a_var[a_sample].split(':')
+                                                sample_info = dict(zip(format_list, sample_format_list))
+                                                sample_allele = sample_info['GT']
+
                                             except KeyError:
                                                 sample_allele = '0/0'
 
@@ -520,10 +524,11 @@ def variant_overview(request, variant='default', panel='default'):
         # variation view
         # <iframe src="https://www.ncbi.nlm.nih.gov/variation/view/?chr=19&q=&assm=GCF_000001405.38&from=87863348&to=87863348" title="Var details" width="100%" height="600"></iframe>
 
+        # more details needed here
         var_info_block_dict = {}
 
+        # Catch for if var_mutations is an empty dict.
         if len(var_mutations.keys()) != 0:
-
             for a_var in var_mutations.keys():
                 var_info_block_dict[a_var], myvar_info = myvariant_html(a_var, var_mutations[a_var], genome_reference=reference_genome)
 

@@ -455,7 +455,7 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 
 		#mutation_info = mv.getvariant('chr1:g.161362951G>A', assembly='hg38', fields='clinvar, snpeff')
 
-		print(mutation_info)
+		#print(mutation_info)
 
 		if mutation_info is not None:
 
@@ -480,9 +480,14 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 
 					# SNPEff Effect
 					# print(mutation_info['snpeff'])
-					row_string += '<td>' + mutation_info['snpeff']['ann'][-1]['effect'] + ' ' + \
-								mutation_info['snpeff']['ann'][-1]['putative_impact']
-					row_string += '</td>'
+
+					if type(rcv_data['conditions']) is list:
+						row_string += '<td>' + mutation_info['snpeff']['ann'][-1]['effect'] + ' ' + \
+									mutation_info['snpeff']['ann'][-1]['putative_impact']
+						row_string += '</td>'
+					else:
+						row_string += '<td>' + mutation_info['snpeff']['ann']['effect'] + ' ' + mutation_info['snpeff']['ann']['putative_impact']
+						row_string += '</td>'
 
 					# Conditions
 					#print(rcv_data)
