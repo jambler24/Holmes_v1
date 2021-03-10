@@ -464,11 +464,55 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 			# Conditions
 			# TODO: MyVariant can return a list, or a dict. Need to deal with either
 
-			if type(mutation_info['clinvar']['rcv']) is list:
+			try:
 
-				for rcv_data in mutation_info['clinvar']['rcv']:
+				if type(mutation_info['clinvar']['rcv']) is list:
 
-					#Conditions on each row
+					for rcv_data in mutation_info['clinvar']['rcv']:
+
+						#Conditions on each row
+
+						row_string = '<tr>'
+
+						# Ref allele
+						row_string += '<td>' + str(mutation_info['clinvar']['ref']) + '</td>'
+
+						# Alt allele
+						row_string += '<td>' + str(mutation_info['clinvar']['alt']) + '</td>'
+
+						# SNPEff Effect
+						# print(mutation_info['snpeff'])
+
+						if type(rcv_data['conditions']) is list:
+							row_string += '<td>' + mutation_info['snpeff']['ann'][-1]['effect'] + ' ' + \
+										mutation_info['snpeff']['ann'][-1]['putative_impact']
+							row_string += '</td>'
+						else:
+							row_string += '<td>' + mutation_info['snpeff']['ann']['effect'] + ' ' + mutation_info['snpeff']['ann']['putative_impact']
+							row_string += '</td>'
+
+						# Conditions
+						#print(rcv_data)
+						if type(rcv_data['conditions']) is list:
+							row_string += '<td>' + str(rcv_data['conditions'][0]['name']) + '</td>'
+						else:
+							row_string += '<td>' + str(rcv_data['conditions']['name']) + '</td>'
+
+						# Clinical significance
+						row_string += '<td>' + str(rcv_data['clinical_significance']) + '</td>'
+
+						# RSID
+						row_string += '<td>' + str(rcv_data['accession']) + '</td>'
+
+						# RVC
+						row_string += '<td><a href=https://www.ncbi.nlm.nih.gov/snp/' + str(
+							mutation_info['clinvar']['rsid']) + '>' + str(mutation_info['clinvar']['rsid']) + '</a></td>'
+
+						row_string += '</tr>'
+						html_string += row_string
+
+
+				elif type(mutation_info['clinvar']['rcv']) is dict:
 
 					row_string = '<tr>'
 
@@ -479,70 +523,43 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 					row_string += '<td>' + str(mutation_info['clinvar']['alt']) + '</td>'
 
 					# SNPEff Effect
-					# print(mutation_info['snpeff'])
-
-					if type(rcv_data['conditions']) is list:
-						row_string += '<td>' + mutation_info['snpeff']['ann'][-1]['effect'] + ' ' + \
-									mutation_info['snpeff']['ann'][-1]['putative_impact']
-						row_string += '</td>'
-					else:
-						row_string += '<td>' + mutation_info['snpeff']['ann']['effect'] + ' ' + mutation_info['snpeff']['ann']['putative_impact']
-						row_string += '</td>'
+					#print(mutation_info['snpeff'])
+					row_string += '<td>' + mutation_info['snpeff']['ann'][-1]['effect'] + ' ' + mutation_info['snpeff']['ann'][-1]['putative_impact']
+					row_string += '</td>'
 
 					# Conditions
-					#print(rcv_data)
-					if type(rcv_data['conditions']) is list:
-						row_string += '<td>' + str(rcv_data['conditions'][0]['name']) + '</td>'
-					else:
-						row_string += '<td>' + str(rcv_data['conditions']['name']) + '</td>'
+
+					row_string += '<td>' + str(mutation_info['clinvar']['rcv']['conditions']['name']) + '</td>'
 
 					# Clinical significance
-					row_string += '<td>' + str(rcv_data['clinical_significance']) + '</td>'
+					row_string += '<td>' + str(mutation_info['clinvar']['rcv']['clinical_significance']) + '</td>'
 
 					# RSID
-					row_string += '<td>' + str(rcv_data['accession']) + '</td>'
+					row_string += '<td>' + str(mutation_info['clinvar']['rcv']['accession']) + '</td>'
 
 					# RVC
-					row_string += '<td><a href=https://www.ncbi.nlm.nih.gov/snp/' + str(
-						mutation_info['clinvar']['rsid']) + '>' + str(mutation_info['clinvar']['rsid']) + '</a></td>'
+					row_string += '<td><a href=https://www.ncbi.nlm.nih.gov/snp/' + str(mutation_info['clinvar']['rsid']) + '>' + str(mutation_info['clinvar']['rsid']) + '</a></td>'
 
 					row_string += '</tr>'
 					html_string += row_string
 
-
-			elif type(mutation_info['clinvar']['rcv']) is dict:
+			except KeyError:
 
 				row_string = '<tr>'
-
 				# Ref allele
-				row_string += '<td>' + str(mutation_info['clinvar']['ref']) + '</td>'
+				row_string += '<td>' + a_mutation.split('>')[0] + '</td>'
 
 				# Alt allele
-				row_string += '<td>' + str(mutation_info['clinvar']['alt']) + '</td>'
+				row_string += '<td>' + a_mutation.split('>')[1] + '</td>'
 
-				# SNPEff Effect
-				#print(mutation_info['snpeff'])
-				row_string += '<td>' + mutation_info['snpeff']['ann'][-1]['effect'] + ' ' + mutation_info['snpeff']['ann'][-1]['putative_impact']
-				row_string += '</td>'
+				row_string += '<td>' + 'No clinvar info returned' + '</td>'
 
-				# Conditions
-
-				row_string += '<td>' + str(mutation_info['clinvar']['rcv']['conditions']['name']) + '</td>'
-
-				# Clinical significance
-				row_string += '<td>' + str(mutation_info['clinvar']['rcv']['clinical_significance']) + '</td>'
-
-				# RSID
-				row_string += '<td>' + str(mutation_info['clinvar']['rcv']['accession']) + '</td>'
-
-				# RVC
-				row_string += '<td><a href=https://www.ncbi.nlm.nih.gov/snp/' + str(mutation_info['clinvar']['rsid']) + '>' + str(mutation_info['clinvar']['rsid']) + '</a></td>'
+				row_string += '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>'
 
 				row_string += '</tr>'
 				html_string += row_string
 
 		else:
-
 			row_string = '<tr>'
 			# Ref allele
 			row_string += '<td>' + a_mutation.split('>')[0] + '</td>'
@@ -550,7 +567,7 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 			# Alt allele
 			row_string += '<td>' + a_mutation.split('>')[1] + '</td>'
 
-			row_string += '<td>' + 'No clinvar info returned' + '</td>'
+			row_string += '<td>' + 'No annotation info returned' + '</td>'
 
 			row_string += '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>'
 
