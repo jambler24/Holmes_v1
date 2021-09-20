@@ -1224,14 +1224,14 @@ def subset_gff_to_db_old(in_file_path, requested_panel_id, level='exon'):
 	return anno_obj
 
 
-def subset_gff_to_db(in_file_path, requested_panel_id):
+def subset_gff_to_db(in_file_path, requested_panel_id, ref_genome, trim_gene_names=True):
 	"""
 	:param in_file_path:
 	:param requested_panel_id:
 	:return:
 	"""
 
-	# TODO CHeck if the gene is already added, record which assembly!!!
+	# TODO Check if the gene is already added, record which assembly!!!
 
 	gene_list_obj = PanelGeneList.objects.get(panel_id=requested_panel_id)
 
@@ -1308,8 +1308,14 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 						if info_bite.split('=')[0] == 'description':
 							gene_description = info_bite.split('=')[1]
 
+					if trim_gene_names:
+						clean_gene_name = gene_ID.replace('gene:', '')
+						clean_gene_name = clean_gene_name.replace('gene-', '')
+					else:
+						clean_gene_name = gene_ID
+
 					# Search by gene ID and gene name
-					if gene_ID.replace('gene:', '') in gene_list or gene_name in gene_list:
+					if clean_gene_name in gene_list or gene_name in gene_list:
 						found_genes.append(gene_name)
 						print('Match', gene_name, gene_ID.replace('gene:', ''))
 						result_dict['found_genes'] = result_dict['found_genes'] + 1
@@ -1322,19 +1328,21 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 						print('-----------------------')
 
 						# Check if the gene has already been added to the DB Gene Info table
-						if not GeneInfo.objects.filter(gene_id=gene_ID.replace('gene:', '')).exists():
+						if not GeneInfo.objects.filter(gene_id=clean_gene_name).exists():
 							print('Save new gene', gene_name)
+
 							new_gene = GeneInfo(
-								gene_id=gene_ID.replace('gene:', ''),
+								gene_id=clean_gene_name,
 								gene_name=gene_name,
 								gene_description=gene_description,
+								gene_genome_assembly=ref_genome,
 								gene_chrom=gene_chrom
 							)
 							new_gene.save()
 							result_dict['imported_genes'] = result_dict['imported_genes'] + 1
 
 							# If the gene is new, add the ID to this list so the mRNA will be added
-							new_gene_id_list.append(gene_ID)
+							new_gene_id_list.append(clean_gene_name)
 
 				# Get the mRNA associated with the gene. This normally follows the gene entry line.
 				if line_list[2] == 'mRNA':
@@ -1346,8 +1354,15 @@ def subset_gff_to_db(in_file_path, requested_panel_id):
 
 					#TODO This will miss if the gene name, not ID was provided. Add both to new list?
 					# Check if parent gene in the gene info table?
-					if parent in new_gene_id_list:
-						gene_ID_obj = GeneInfo.objects.get(gene_id=parent.replace('gene:', ''))
+
+					if trim_gene_names:
+						clean_parent_name = parent.replace('gene:', '')
+						clean_parent_name = clean_parent_name.replace('gene-', '')
+					else:
+						clean_parent_name = parent
+
+					if clean_parent_name in new_gene_id_list:
+						gene_ID_obj = GeneInfo.objects.get(gene_id=clean_parent_name)
 						transcript_list.append(transcript_ID.replace('transcript:', ''))
 						if not TranscriptInfo.objects.filter(transcript_id=transcript_ID.replace('transcript:', '')).exists():
 							print('Save new mRNA', transcript_ID.replace('transcript:', ''))

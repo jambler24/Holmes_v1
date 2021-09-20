@@ -59,6 +59,8 @@ class PanelGeneList(models.Model):
 
 	comparison = models.CharField(max_length=160, default='None')
 
+	reference_genome_used = models.CharField(max_length=160, default='None')
+
 	last_threshold = models.IntegerField(default=-1)
 
 	def __str__(self):
@@ -79,6 +81,8 @@ class GeneInfo(models.Model):
 
 	gene_biotype = models.CharField(max_length=60, help_text='', default='NA')
 	gene_strand = models.CharField(max_length=10, help_text='', default='NA')
+
+	gene_genome_assembly = models.CharField(max_length=100, help_text='', default='NA')
 
 	def __str__(self):
 		return self.gene_id

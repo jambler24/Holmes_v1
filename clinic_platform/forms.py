@@ -15,6 +15,6 @@ class GeneQueryForm(forms.Form):
 class PanelListForm(ModelForm):
     class Meta:
         model = PanelGeneList
-        fields = ['panel_id', 'phenotype', 'gene_list']
+        fields = ['panel_id', 'phenotype', 'gene_list', 'reference_genome_used']
 
 

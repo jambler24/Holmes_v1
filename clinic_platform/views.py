@@ -5,6 +5,9 @@ from django.shortcuts import redirect
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
 
+from django.core.exceptions import MultipleObjectsReturned
+
+
 import json
 import os
 import networkx as nx
@@ -106,6 +109,9 @@ def gene_list_input(request):
 
         ref_genome_gff = request.POST['anno_selection']
 
+        reference_genome_used = request.POST['reference_genome_used']
+
+
         # Add to DB
         if form.is_valid():
             u = form.save()
@@ -122,7 +128,7 @@ def gene_list_input(request):
 
             print(panel_val)
 
-            import_result = subset_gff_to_db(in_file_path, panel_val)
+            import_result = subset_gff_to_db(in_file_path, panel_val, ref_genome=reference_genome_used)
 
             print(import_result)
 
@@ -313,7 +319,7 @@ def variant_network_overview(request):
 
 def variant_overview(request, variant='default', panel='default', reference_genome='hg19'):
     """
-
+    This view shows variants that are found within the genes specified in the panel and checks for their existence on myvariant.
     :param request:
     :param variant:
     :param panel:
@@ -393,7 +399,17 @@ def variant_overview(request, variant='default', panel='default', reference_geno
             a_gene = a_gene.strip()
 
             # TODO: This can return multiple GeneInfo objects if genes with different gene_id have the same gene_name
-            gene_obj = GeneInfo.objects.get(Q(gene_id=a_gene) | Q(gene_name=a_gene))
+            print(a_gene)
+
+            try:
+                gene_obj = GeneInfo.objects.get(Q(gene_id=a_gene) | Q(gene_name=a_gene))
+
+            except MultipleObjectsReturned:
+
+                print('Waring - Multiple genes found for ', a_gene)
+
+                gene_obj = GeneInfo.objects.get(Q(gene_id=a_gene))
+
 
             gene_chrom = gene_obj.gene_chrom.replace('chr', '')
 
