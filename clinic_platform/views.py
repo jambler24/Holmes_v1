@@ -23,6 +23,7 @@ from os.path import isfile, join
 from bs4 import BeautifulSoup
 import requests
 import pandas as pd
+import vcf
 
 # Container Paths
 
@@ -396,25 +397,6 @@ def variant_overview(request, variant='default', panel='default', reference_geno
         sample_list = []
         var_mutations = {}
 
-        # Parse the associated vcf files
-
-        for a_vcf_file in vcf_file_list:
-            file_name = '_'.join(a_vcf_file.split('.')[:-1])
-
-            print('Starting VCF parse')
-
-            vcf_info = input_parser(vcf_folder + a_vcf_file)
-
-            vcf_dict = {
-                'file_name': file_name,
-                'vcf_info': vcf_info
-            }
-
-            print('VCF parse complete')
-
-            vcf_info_list.append(vcf_dict)
-
-        # print(vcf_info_list)
 
         # Find overlaps where vars are in Exons for the panel
 
@@ -460,28 +442,41 @@ def variant_overview(request, variant='default', panel='default', reference_geno
 
                 for a_exon in trans_exons:
 
-                    for a_vcf in vcf_info_list:
+                    # Per variant, per gene
+                    # Stream in from file
 
-                        for a_var in a_vcf['vcf_info']:
+                    for a_vcf_file in vcf_file_list:
+                        file_name = '_'.join(a_vcf_file.split('.')[:-1])
 
-                            # Per variant, per gene
+                        print('Starting VCF parse')
+
+                        print(file_name)
+
+                        vcf_path = vcf_folder + a_vcf_file
+
+                        print(vcf_path)
+
+                        vcf_reader = vcf.Reader(open(vcf_path, 'r'))
+
+                        for record in vcf_reader:
+
+                            print(record)
 
                             # Make sure it is a string, with no chr
-                            var_chrom = str(a_var['CHROM'].replace('chr', ''))
+                            var_chrom = record.CHROM.replace('chr', '')
                             var_chrom = var_chrom.replace('Chr', '').lower()
 
                             if var_chrom in refSeq_chrom_mapping.keys():
                                 var_chrom = refSeq_chrom_mapping[var_chrom]
 
-                            # print(var_chrom, gene_chrom)
 
                             if var_chrom == str(gene_chrom):
 
-                                if int(a_exon.exon_start) <= int(a_var['POS']) <= int(a_exon.exon_stop):
+                                if int(a_exon.exon_start) <= int(Record.POS) <= int(a_exon.exon_stop):
 
                                     # POLD1_AMPL7154402731, chr19, 50 920 347 - 50 920 673
 
-                                    var_pos = 'pos_' + str(a_var['POS'] + '_chr_' + str(gene_chrom))
+                                    var_pos = 'pos_' + str(record.POS + '_chr_' + str(gene_chrom))
 
                                     if var_pos not in var_list:
                                         var_list.append(var_pos)
@@ -505,12 +500,12 @@ def variant_overview(request, variant='default', panel='default', reference_geno
 
                                             # Also check alleles
 
-                                            ref_allele = a_var['REF']
-                                            alt_alleles = a_var['ALT'].split(',')
+                                            ref_allele = record.REF
+                                            alt_alleles = record.ALT.split(',')
                                             all_alleles = [ref_allele] + alt_alleles
                                             try:
                                                 # Split last column based on FORMAT for the sample
-                                                format_list = a_var['FORMAT'].split(':')
+                                                format_list = record.FORMAT.split(':')
                                                 sample_format_list = a_var[a_sample].split(':')
                                                 sample_info = dict(zip(format_list, sample_format_list))
                                                 sample_allele = sample_info['GT']
@@ -550,7 +545,7 @@ def variant_overview(request, variant='default', panel='default', reference_geno
                                                     var_mutations[var_pos].append(mut_simple_string_2)
 
                                                 sample_var_dict = {
-                                                    'quality': a_var['QUAL'],
+                                                    'quality': record.QUAL,
                                                     'genotype': sample_allele,
                                                     'mutation': mutation_string,
                                                     'gene': a_gene,
@@ -562,13 +557,13 @@ def variant_overview(request, variant='default', panel='default', reference_geno
                                                     # No gene, fresh start
                                                     result_dict[a_gene] = {
                                                         var_pos: {'samples': {a_sample: sample_var_dict},
-                                                                  'effect': a_var['INFO']}}
+                                                                  'effect': record.INFO}}
                                                 else:
                                                     if var_pos not in result_dict[a_gene].keys():
                                                         # Existing gene, new variant position
                                                         result_dict[a_gene][var_pos] = {
                                                             'samples': {a_sample: sample_var_dict},
-                                                            'effect': a_var['INFO']}
+                                                            'effect': record.INFO}
 
                                                     else:
                                                         # Existing gene, existing var position, new sample
