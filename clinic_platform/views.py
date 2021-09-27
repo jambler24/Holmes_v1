@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from django.core.exceptions import MultipleObjectsReturned
 
-
+import re
 import json
 import os
 import networkx as nx
@@ -334,6 +334,33 @@ def variant_overview(request, variant='default', panel='default', reference_geno
 
     vcf_headder_list = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
 
+    refSeq_chrom_mapping = {
+        'NC_000001.11': '1',
+        'NC_000002.12': '2',
+        'NC_000003.12': '3',
+        'NC_000004.12': '4',
+        'NC_000005.10': '5',
+        'NC_000006.12': '6',
+        'NC_000007.14': '7',
+        'NC_000008.11': '8',
+        'NC_000009.12': '9',
+        'NC_000010.11': '10',
+        'NC_000011.10': '11',
+        'NC_000012.12': '12',
+        'NC_000013.11': '13',
+        'NC_000014.9': '14',
+        'NC_000015.10': '15',
+        'NC_000016.10': '16',
+        'NC_000017.11': '17',
+        'NC_000018.10': '18',
+        'NC_000019.10': '19',
+        'NC_000020.11': '20',
+        'NC_000021.9': '21',
+        'NC_000022.11': '22',
+        'NC_000023.11': 'x',
+        'NC_000024.10': 'y'
+    }
+
     # Get available panels
 
     panel_obj = list(PanelGeneList.objects.all())
@@ -374,12 +401,16 @@ def variant_overview(request, variant='default', panel='default', reference_geno
         for a_vcf_file in vcf_file_list:
             file_name = '_'.join(a_vcf_file.split('.')[:-1])
 
+            print('Starting VCF parse')
+
             vcf_info = input_parser(vcf_folder + a_vcf_file)
 
             vcf_dict = {
                 'file_name': file_name,
                 'vcf_info': vcf_info
             }
+
+            print('VCF parse complete')
 
             vcf_info_list.append(vcf_dict)
 
@@ -399,19 +430,24 @@ def variant_overview(request, variant='default', panel='default', reference_geno
             a_gene = a_gene.strip()
 
             # TODO: This can return multiple GeneInfo objects if genes with different gene_id have the same gene_name
-            print(a_gene)
-
             try:
                 gene_obj = GeneInfo.objects.get(Q(gene_id=a_gene) | Q(gene_name=a_gene))
 
             except MultipleObjectsReturned:
 
                 print('Waring - Multiple genes found for ', a_gene)
-
                 gene_obj = GeneInfo.objects.get(Q(gene_id=a_gene))
 
 
             gene_chrom = gene_obj.gene_chrom.replace('chr', '')
+
+            # Deal with random refseq chrom names
+            if gene_chrom in refSeq_chrom_mapping.keys():
+                print(gene_chrom)
+                gene_chrom = refSeq_chrom_mapping[gene_chrom]
+                print('Mapped to ', gene_chrom)
+
+            gene_chrom = gene_chrom.lower()
 
             transcripts = list(TranscriptInfo.objects.filter(gene_info=gene_obj))
 
@@ -432,7 +468,10 @@ def variant_overview(request, variant='default', panel='default', reference_geno
 
                             # Make sure it is a string, with no chr
                             var_chrom = str(a_var['CHROM'].replace('chr', ''))
-                            var_chrom = var_chrom.replace('Chr', '')
+                            var_chrom = var_chrom.replace('Chr', '').lower()
+
+                            if var_chrom in refSeq_chrom_mapping.keys():
+                                var_chrom = refSeq_chrom_mapping[var_chrom]
 
                             # print(var_chrom, gene_chrom)
 
@@ -481,14 +520,29 @@ def variant_overview(request, variant='default', panel='default', reference_geno
 
                                             if sample_allele != '0/0':
 
-                                                mutation_string = ref_allele + '->' + all_alleles[
-                                                    int(sample_allele.split('/')[0])] + '/' + all_alleles[
-                                                                      int(sample_allele.split('/')[1])]
+                                                #TODO: Think more about supporting phasing
 
-                                                mut_simple_string_1 = ref_allele + '>' + all_alleles[
-                                                    int(sample_allele.split('/')[0])]
-                                                mut_simple_string_2 = ref_allele + '>' + all_alleles[
-                                                    int(sample_allele.split('/')[1])]
+                                                if '|' in sample_allele:
+                                                    # Deal with phasing
+                                                    mutation_string = ref_allele + '->' + all_alleles[
+                                                        int(sample_allele.split('|')[0])] + '|' + all_alleles[
+                                                                          int(sample_allele.split('|')[1])]
+
+                                                    mut_simple_string_1 = ref_allele + '>' + all_alleles[
+                                                        int(sample_allele.split('|')[0])]
+                                                    mut_simple_string_2 = ref_allele + '>' + all_alleles[
+                                                        int(sample_allele.split('|')[1])]
+
+                                                else:
+                                                    # No phasing
+                                                    mutation_string = ref_allele + '->' + all_alleles[
+                                                        int(sample_allele.split('/')[0])] + '/' + all_alleles[
+                                                                          int(sample_allele.split('/')[1])]
+
+                                                    mut_simple_string_1 = ref_allele + '>' + all_alleles[
+                                                        int(sample_allele.split('/')[0])]
+                                                    mut_simple_string_2 = ref_allele + '>' + all_alleles[
+                                                        int(sample_allele.split('/')[1])]
 
                                                 if mut_simple_string_1 not in var_mutations[var_pos]:
                                                     var_mutations[var_pos].append(mut_simple_string_1)
