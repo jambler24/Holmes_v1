@@ -672,7 +672,7 @@ def variant_overview(request, variant='default', panel='default', reference_geno
                 for a_sample in result_dict[a_gene][a_var]['samples']:
                     df[a_var][a_sample] = result_dict[a_gene][a_var]['samples'][a_sample]['mutation']
 
-        render_table = var_results_to_html_table(result_dict, sample_list)
+        render_table = var_results_to_html_table(result_dict, sample_list, panel_obj)
 
         variant_info_dict = {
             'selected': variant,

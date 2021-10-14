@@ -1,9 +1,10 @@
 import networkx as nx
 import csv, os
 import django_tables2 as tables
-from clinic_platform.models import CurrentSettings, Experiment, PanelGeneList, GeneInfo, TranscriptInfo, ExonInfo, CDSInfo, GeneExpression
+from clinic_platform.models import CurrentSettings, Experiment, PanelGeneList, GeneInfo, TranscriptInfo, ExonInfo, CDSInfo, GeneExpression, SampleInfo
 import re
 import pandas
+import json
 from GenGraph import *
 from Bio.Seq import translate
 from os import listdir
@@ -296,11 +297,22 @@ def filter_variants(var_object, q_threshold):
 	return pass_list
 
 
-def var_results_to_html_table(var_result_dict, sample_list):
+def var_results_to_html_table(var_result_dict, sample_list, selected_panel_obj):
 	html_table = '<table class="table">'
 
 	ordered_var_list = []
 	ordered_gene_header_list = []
+
+	sample_phenotype_dict = SampleInfo.objects.filter(experiment=selected_panel_obj)
+
+	sample_pheno_info = {}
+
+	for thing in sample_phenotype_dict:
+		sample_pheno_info[thing.__str__()] = json.loads(thing.phenotype_info)
+
+
+	print(sample_pheno_info)
+
 
 	for a_gene in var_result_dict.keys():
 
