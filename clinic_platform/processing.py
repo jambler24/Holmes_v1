@@ -326,7 +326,7 @@ def var_results_to_html_table(var_result_dict, sample_list):
 		'info': 'color'
 	}
 
-	# Create header info
+	# Create gene header row
 
 	html_table = html_table + '<tr><td></td>'
 	last_gene = ''
@@ -343,6 +343,8 @@ def var_results_to_html_table(var_result_dict, sample_list):
 	html_table = html_table + '</tr>'
 
 	html_table = html_table + '<tr><td></td>'
+
+	# Create variant header row
 
 	for a_var in ordered_var_list:
 		if a_var == 'gap':
@@ -385,6 +387,8 @@ def var_results_to_html_table(var_result_dict, sample_list):
 
 			if var_effect == 'HIGH' and len(cell_info) > 0:
 				col_string = col_string + "<td bgcolor='red'>"
+			elif len(cell_info) > 0:
+				col_string = col_string + "<td bgcolor=#FFB6C1>"
 			else:
 				col_string = col_string + "<td>"
 
@@ -448,10 +452,14 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 		var_info_string = ''.join([var_chr, ':g.', var_pos, a_mutation])
 
 		try:
+			print(var_info_string)
 			mutation_info = mv.getvariant(var_info_string, fields='clinvar, snpeff', assembly=genome_reference, as_dataframe=True)
 		except requests.HTTPError as exception:
 			print(exception)
 			request_info = {'myvariant_error': 'My variant was not able to retrieve data.'}
+
+		except:
+			request_info = {'myvariant_error': 'My variant closed connection without response.'}
 
 		#mutation_info = mv.getvariant('chr1:g.161362951G>A', assembly='hg38', fields='clinvar, snpeff')
 

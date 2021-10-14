@@ -1,9 +1,11 @@
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.conf import settings
 from django.shortcuts import redirect
 from django.core.files.storage import FileSystemStorage
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
 
 from django.core.exceptions import MultipleObjectsReturned
 
@@ -318,6 +320,8 @@ def variant_network_overview(request):
     return render(request, 'variant_info.html', {'table_data': 'this'})
 
 
+# Delete this in production
+@csrf_exempt
 def variant_overview(request, variant='default', panel='default', reference_genome='hg19'):
     """
     This view shows variants that are found within the genes specified in the panel and checks for their existence on myvariant.
@@ -406,6 +410,8 @@ def variant_overview(request, variant='default', panel='default', reference_geno
 
         result_dict = {}
 
+        variant_search_range_dict = {}
+
         for a_gene in panel_gene_list:
 
             # Get transcripts
@@ -431,6 +437,12 @@ def variant_overview(request, variant='default', panel='default', reference_geno
 
             gene_chrom = gene_chrom.lower()
 
+            if gene_chrom not in variant_search_range_dict.keys():
+                variant_search_range_dict[gene_chrom] = {a_gene: []}
+            else:
+                if a_gene not in variant_search_range_dict[gene_chrom].keys():
+                    variant_search_range_dict[gene_chrom][a_gene] = []
+
             transcripts = list(TranscriptInfo.objects.filter(gene_info=gene_obj))
 
             for trans in transcripts:
@@ -441,134 +453,167 @@ def variant_overview(request, variant='default', panel='default', reference_geno
                 trans_exons.sort(key=lambda x: x.exon_start)
 
                 for a_exon in trans_exons:
+                    variant_search_range_dict[gene_chrom][a_gene].append([a_exon.exon_start, a_exon.exon_stop])
 
-                    # Per variant, per gene
-                    # Stream in from file
+        # Move through VCF once, checking variant_search_range_dict for genes
 
-                    for a_vcf_file in vcf_file_list:
-                        file_name = '_'.join(a_vcf_file.split('.')[:-1])
+        for a_vcf_file in vcf_file_list:
+            file_name = '_'.join(a_vcf_file.split('.')[:-1])
 
-                        print('Starting VCF parse')
+            print('Starting VCF parse')
 
-                        print(file_name)
+            print(file_name)
 
-                        vcf_path = vcf_folder + a_vcf_file
+            vcf_path = vcf_folder + a_vcf_file
 
-                        print(vcf_path)
+            print(vcf_path)
 
-                        vcf_reader = vcf.Reader(open(vcf_path, 'r'))
+            vcf_reader = vcf.Reader(open(vcf_path, 'r'))
 
-                        for record in vcf_reader:
+            for record in vcf_reader:
 
-                            print(record)
+                # Make sure it is a string, with no chr
+                var_chrom = record.CHROM.replace('chr', '')
+                var_chrom = var_chrom.replace('Chr', '').lower()
 
-                            # Make sure it is a string, with no chr
-                            var_chrom = record.CHROM.replace('chr', '')
-                            var_chrom = var_chrom.replace('Chr', '').lower()
-
-                            if var_chrom in refSeq_chrom_mapping.keys():
-                                var_chrom = refSeq_chrom_mapping[var_chrom]
+                if var_chrom in refSeq_chrom_mapping.keys():
+                    var_chrom = refSeq_chrom_mapping[var_chrom]
 
 
-                            if var_chrom == str(gene_chrom):
+                if var_chrom in variant_search_range_dict.keys():
 
-                                if int(a_exon.exon_start) <= int(Record.POS) <= int(a_exon.exon_stop):
+                    for a_gene, a_gene_range_list in variant_search_range_dict[var_chrom].items():
 
-                                    # POLD1_AMPL7154402731, chr19, 50 920 347 - 50 920 673
+                        for an_exon_range in a_gene_range_list:
 
-                                    var_pos = 'pos_' + str(record.POS + '_chr_' + str(gene_chrom))
+                            if int(an_exon_range[0]) <= int(record.POS) <= int(an_exon_range[1]):
 
-                                    if var_pos not in var_list:
-                                        var_list.append(var_pos)
-                                        var_mutations[var_pos] = []
+                                # POLD1_AMPL7154402731, chr19, 50 920 347 - 50 920 673
 
-                                    if a_gene not in gene_list:
-                                        gene_list.append(a_gene)
+                                try:
+                                    gene_obj = GeneInfo.objects.get(Q(gene_id=a_gene) | Q(gene_name=a_gene))
 
-                                    # Also account for multiple samples in a vcf
+                                except MultipleObjectsReturned:
 
-                                    for a_sample in a_var.keys():
+                                    print('Waring - Multiple genes found for ', a_gene)
+                                    gene_obj = GeneInfo.objects.get(Q(gene_id=a_gene))
 
-                                        # Per variant in the parsed vcf
+                                gene_chrom = gene_obj.gene_chrom.replace('chr', '')
 
-                                        if a_sample not in vcf_headder_list:
+                                # Deal with random refseq chrom names
+                                if gene_chrom in refSeq_chrom_mapping.keys():
+                                    print(gene_chrom)
+                                    gene_chrom = refSeq_chrom_mapping[gene_chrom]
+                                    print('Mapped to ', gene_chrom)
 
-                                            # Per sample in the vcf file
+                                gene_chrom = gene_chrom.lower()
 
-                                            if a_sample not in sample_list:
-                                                sample_list.append(a_sample)
+                                var_pos = 'pos_' + str(record.POS)+ '_chr_' + str(gene_chrom)
 
-                                            # Also check alleles
+                                if var_pos not in var_list:
+                                    var_list.append(var_pos)
+                                    var_mutations[var_pos] = []
 
-                                            ref_allele = record.REF
-                                            alt_alleles = record.ALT.split(',')
-                                            all_alleles = [ref_allele] + alt_alleles
-                                            try:
-                                                # Split last column based on FORMAT for the sample
-                                                format_list = record.FORMAT.split(':')
-                                                sample_format_list = a_var[a_sample].split(':')
-                                                sample_info = dict(zip(format_list, sample_format_list))
-                                                sample_allele = sample_info['GT']
+                                if a_gene not in gene_list:
+                                    gene_list.append(a_gene)
 
-                                            except KeyError:
-                                                sample_allele = '0/0'
+                                # Also account for multiple samples in a vcf
 
-                                            if sample_allele != '0/0':
+                                for a_sample in record.samples:
 
-                                                #TODO: Think more about supporting phasing
+                                    # Per variant in the parsed vcf
 
-                                                if '|' in sample_allele:
-                                                    # Deal with phasing
-                                                    mutation_string = ref_allele + '->' + all_alleles[
-                                                        int(sample_allele.split('|')[0])] + '|' + all_alleles[
-                                                                          int(sample_allele.split('|')[1])]
+                                    if a_sample not in vcf_headder_list:
 
-                                                    mut_simple_string_1 = ref_allele + '>' + all_alleles[
-                                                        int(sample_allele.split('|')[0])]
-                                                    mut_simple_string_2 = ref_allele + '>' + all_alleles[
-                                                        int(sample_allele.split('|')[1])]
+                                        # Per sample in the vcf file
+
+                                        if a_sample.sample not in sample_list:
+                                            sample_list.append(a_sample.sample)
+
+                                        # Also check alleles
+
+                                        ref_allele = record.REF
+
+                                        all_alleles = [ref_allele] + record.ALT
+
+                                        try:
+
+                                            sample_allele = a_sample['GT']
+
+                                        except KeyError:
+                                            sample_allele = '0/0'
+
+                                        if sample_allele != '0/0':
+
+                                            #TODO: Think more about supporting phasing
+
+                                            if '|' in sample_allele:
+                                                # Deal with phasing
+
+                                                mutation_string = ref_allele + '->' + all_alleles[int(sample_allele.split('|')[0])].__str__() + '|' + all_alleles[int(sample_allele.split('|')[1])].__str__()
+
+                                                mut_simple_string_1 = ref_allele + '>' + all_alleles[
+                                                    int(sample_allele.split('|')[0])].__str__()
+                                                mut_simple_string_2 = ref_allele + '>' + all_alleles[
+                                                    int(sample_allele.split('|')[1])].__str__()
+
+                                            else:
+                                                # No phasing
+
+                                                try:
+                                                    mutation_string = ref_allele + '->' + all_alleles[int(sample_allele.split('/')[0])].__str__() + '/' + all_alleles[int(sample_allele.split('/')[1])].__str__()
+
+                                                    mut_simple_string_1 = ref_allele + '>' + all_alleles[int(sample_allele.split('/')[0])].__str__()
+                                                    mut_simple_string_2 = ref_allele + '>' + all_alleles[int(sample_allele.split('/')[1])].__str__()
+
+                                                except ValueError:
+
+
+                                                    print('------- Value Error --------')
+
+                                                    print(ref_allele)
+                                                    print(sample_allele.split('/')[0])
+                                                    print(type(sample_allele.split('/')[0]))
+
+                                                    print(sample_allele.split('/')[1])
+                                                    print(type(sample_allele.split('/')[1]))
+
+                                                    print(all_alleles)
+
+                                                    print('---------------')
+
+                                                    mutation_string = ref_allele + '->' + sample_allele.split('/')[0] + '/' + sample_allele.split('/')[1]
+
+                                                    mut_simple_string_1 = ref_allele + '>' + sample_allele.split('/')[0]
+                                                    mut_simple_string_2 = ref_allele + '>' + sample_allele.split('/')[1]
+
+
+                                            if mut_simple_string_1 not in var_mutations[var_pos]:
+                                                var_mutations[var_pos].append(mut_simple_string_1)
+                                            if mut_simple_string_2 not in var_mutations[var_pos]:
+                                                var_mutations[var_pos].append(mut_simple_string_2)
+
+                                            sample_var_dict = {
+                                                'quality': record.QUAL,
+                                                'genotype': sample_allele,
+                                                'mutation': mutation_string,
+                                                'gene': a_gene,
+                                                'info': 'info string'
+                                            }
+
+
+                                            if a_gene not in result_dict.keys():
+
+                                                # No gene, fresh start
+                                                result_dict[a_gene] = {var_pos: {'samples': {a_sample.sample.__str__(): sample_var_dict},'effect': record.INFO}}
+                                            else:
+                                                if var_pos not in result_dict[a_gene].keys():
+                                                    # Existing gene, new variant position
+                                                    result_dict[a_gene][var_pos] = {'samples': {a_sample.sample.__str__(): sample_var_dict}, 'effect': record.INFO}
 
                                                 else:
-                                                    # No phasing
-                                                    mutation_string = ref_allele + '->' + all_alleles[
-                                                        int(sample_allele.split('/')[0])] + '/' + all_alleles[
-                                                                          int(sample_allele.split('/')[1])]
-
-                                                    mut_simple_string_1 = ref_allele + '>' + all_alleles[
-                                                        int(sample_allele.split('/')[0])]
-                                                    mut_simple_string_2 = ref_allele + '>' + all_alleles[
-                                                        int(sample_allele.split('/')[1])]
-
-                                                if mut_simple_string_1 not in var_mutations[var_pos]:
-                                                    var_mutations[var_pos].append(mut_simple_string_1)
-                                                if mut_simple_string_2 not in var_mutations[var_pos]:
-                                                    var_mutations[var_pos].append(mut_simple_string_2)
-
-                                                sample_var_dict = {
-                                                    'quality': record.QUAL,
-                                                    'genotype': sample_allele,
-                                                    'mutation': mutation_string,
-                                                    'gene': a_gene,
-                                                    'info': 'info string'
-                                                }
-
-                                                if a_gene not in result_dict.keys():
-
-                                                    # No gene, fresh start
-                                                    result_dict[a_gene] = {
-                                                        var_pos: {'samples': {a_sample: sample_var_dict},
-                                                                  'effect': record.INFO}}
-                                                else:
-                                                    if var_pos not in result_dict[a_gene].keys():
-                                                        # Existing gene, new variant position
-                                                        result_dict[a_gene][var_pos] = {
-                                                            'samples': {a_sample: sample_var_dict},
-                                                            'effect': record.INFO}
-
-                                                    else:
-                                                        # Existing gene, existing var position, new sample
-                                                        result_dict[a_gene][var_pos]['samples'][
-                                                            a_sample] = sample_var_dict
+                                                    # Existing gene, existing var position, new sample
+                                                    result_dict[a_gene][var_pos]['samples'][a_sample.sample.__str__()] = sample_var_dict
 
         # Show sample
 
@@ -604,6 +649,20 @@ def variant_overview(request, variant='default', panel='default', reference_geno
         else:
 
             variant_info_dict = {}
+
+        try:
+            content = render_to_string('variant_info.html', {
+                'panels': panel_list,
+                'var_table': render_table,
+                'var_detail': variant_info_dict,
+                'var_list': var_info_block_dict,
+                'selected_panel': panel_obj
+            })
+            with open('/variant_files/report-static.html', 'w') as static_file:
+                static_file.write(content)
+        except:
+
+            pass
 
 
         return render(request, 'variant_info.html', {

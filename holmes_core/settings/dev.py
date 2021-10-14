@@ -28,5 +28,5 @@ ANNO_FOLDER = '/Users/panix/Library/Mobile Documents/com~apple~CloudDocs/program
 BAM_FILES_DIR = '/Users/panix/Library/Mobile Documents/com~apple~CloudDocs/programs/Holmes/Docker_things/bam_files/'
 VARIANT_FOLDER = '/Users/panix/Library/Mobile Documents/com~apple~CloudDocs/programs/Holmes/Docker_things/variant_files/'
 
-#REF_GENOME_FOLDER = '/Users/panix/Library/Mobile Documents/com~apple~CloudDocs/programs/Holmes/Docker_things/ref_genome/'
-REF_GENOME_FOLDER = '/Volumes/External/genomes/hg19/'
+REF_GENOME_FOLDER = '/Users/panix/Library/Mobile Documents/com~apple~CloudDocs/programs/Holmes/Docker_things/ref_genome/'
+#REF_GENOME_FOLDER = '/Volumes/External/genomes/hg19/'
