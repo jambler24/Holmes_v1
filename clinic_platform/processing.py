@@ -354,7 +354,7 @@ def var_results_to_html_table(var_result_dict, sample_list):
 
 	html_table = html_table + '</tr>'
 
-	# Fill in the rows
+	# Fill in the rows, this is the variant lines
 
 	row_string = ''
 
@@ -362,7 +362,7 @@ def var_results_to_html_table(var_result_dict, sample_list):
 
 		col_num = 0
 
-		row_string = row_string + '<tr>' + '<td>' + a_sample + '</td>'
+		row_string = row_string + '<tr>' + '<td class="sampleName">' + a_sample + '</td>'
 
 		col_string = ''
 
@@ -386,9 +386,9 @@ def var_results_to_html_table(var_result_dict, sample_list):
 				var_effect = 'NA'
 
 			if var_effect == 'HIGH' and len(cell_info) > 0:
-				col_string = col_string + "<td bgcolor='red'>"
+				col_string = col_string + "<td class='highVariant'>"
 			elif len(cell_info) > 0:
-				col_string = col_string + "<td bgcolor=#FFB6C1>"
+				col_string = col_string + "<td class='isVariant'>"
 			else:
 				col_string = col_string + "<td>"
 

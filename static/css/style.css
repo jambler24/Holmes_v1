@@ -22,6 +22,20 @@ table.varDetails thead th {
   font-size: large;
 }
 
+.highVariant {
+  background-color: #8B0000;
+}
+
+.isVariant {
+  background-color: #b0ffcf;
+}
+
+.sampleName {
+  background-color: #e0e0e0;
+  width: 180px;
+}
+
+
 /* Navbar container */
 .navbar {
   overflow: hidden;
