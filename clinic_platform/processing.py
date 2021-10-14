@@ -452,7 +452,6 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 		var_info_string = ''.join([var_chr, ':g.', var_pos, a_mutation])
 
 		try:
-			print(var_info_string)
 			mutation_info = mv.getvariant(var_info_string, fields='clinvar, snpeff', assembly=genome_reference, as_dataframe=True)
 		except requests.HTTPError as exception:
 			print(exception)

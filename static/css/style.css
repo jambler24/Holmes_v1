@@ -32,7 +32,7 @@ table.varDetails thead th {
 
 .sampleName {
   background-color: #e0e0e0;
-  width: 180px;
+  min-width: 160px;
 }
 
 

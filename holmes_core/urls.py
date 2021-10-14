@@ -35,6 +35,7 @@ urlpatterns = [
 
     # Add panel views
     url(r'^addPanelVCF/$', views.add_vcf_to_panel, name='addPanelVCF'),
+    url(r'^addPanelSamplesInfo/$', views.add_sample_info_to_panel, name='addPanelSamplesInfo'),
 
     url(r'^subNetworks/Subnet_*?', views.sub_graph_detail, name='subNetworkDetail'),
     url(r'^coverageSummaryGene/$', views.coverage_summary_gene, name='coverageSummaryGene'),

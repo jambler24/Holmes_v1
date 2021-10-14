@@ -151,3 +151,17 @@ class CDSInfo(models.Model):
 		return self.cds_id
 
 
+class SampleInfo(models.Model):
+
+	experiment = models.ForeignKey(PanelGeneList, on_delete=models.CASCADE)
+
+	sample_id = models.TextField(max_length=200, default='None')
+
+	phenotype_info = models.TextField(max_length=1000000, default='None')
+
+	def __str__(self):
+		return self.sample_id
+
+
+
+

@@ -11,6 +11,7 @@ from django.core.exceptions import MultipleObjectsReturned
 
 import re
 import json
+import csv
 import os
 import networkx as nx
 from networkx.readwrite import json_graph
@@ -19,7 +20,7 @@ import clinic_platform.coverage_tools as cov_tools
 from .processing import *
 from .forms import UploadFileForm, PanelListForm
 from clinic_platform.models import GeneExpression, ExpressionSet, Experiment, CurrentSettings, PanelGeneList, \
-    TranscriptInfo, GeneInfo, CDSInfo
+    TranscriptInfo, GeneInfo, CDSInfo, SampleInfo
 from os import listdir
 from os.path import isfile, join
 from bs4 import BeautifulSoup
@@ -307,6 +308,53 @@ def add_vcf_to_panel(request):
         return render(request, 'add_vcf_to_panel.html', {'vcf_list': clean_vcf_list, 'gene_panels': gene_panels})
 
 
+def add_sample_info_to_panel(request):
+    if request.method == 'POST':
+
+        # Do the thing
+
+        a_panel = request.POST['panel_selection']
+
+        selected_csv = request.POST.get('csvFiles')
+
+        panel_obj = PanelGeneList.objects.get(panel_id=a_panel)
+
+        # Parse the file
+
+        pheno_file_path = vcf_folder + selected_csv
+
+        if selected_csv[-3:].lower() == 'csv':
+            pheno_file = csv.DictReader(open(pheno_file_path))
+        else:
+            pheno_file = csv.DictReader(open(pheno_file_path), delimiter='\t')
+
+        for sample_info_row in pheno_file:
+
+            json_string_pheno = json.dumps(sample_info_row)
+
+            new_sample_info = SampleInfo(experiment=panel_obj, sample_id=sample_info_row['ID'], phenotype_info=json_string_pheno)
+
+            new_sample_info.save()
+
+        return redirect('/')
+
+    else:
+
+        all_vcf_folder_files = os.listdir(vcf_folder)
+        clean_csv_list = []
+
+        for a_csv in all_vcf_folder_files:
+            if a_csv[-3:].lower() == 'csv' or a_csv[-3:].lower() == 'tsv':
+                clean_csv_list.append(a_csv)
+
+        gene_panels = PanelGeneList.objects.values_list('panel_id', flat=True)
+
+        context = {'csv_list': clean_csv_list, 'gene_panels': gene_panels}
+
+        return render(request, 'add_sample_info_to_panel.html', context)
+
+
+
 def variant_network_overview(request):
     # gene_graph = nx.read_graphml('processed/test_var_network.xml')
     # genome_graph = nx.read_graphml('processed/test3genome.xml')
@@ -462,11 +510,11 @@ def variant_overview(request, variant='default', panel='default', reference_geno
 
             print('Starting VCF parse')
 
-            print(file_name)
+            #print(file_name)
 
             vcf_path = vcf_folder + a_vcf_file
 
-            print(vcf_path)
+            #print(vcf_path)
 
             vcf_reader = vcf.Reader(open(vcf_path, 'r'))
 
@@ -640,11 +688,16 @@ def variant_overview(request, variant='default', panel='default', reference_geno
         # Catch for if var_mutations is an empty dict.
         if len(var_mutations.keys()) != 0:
             for a_var in var_mutations.keys():
+                print(var_mutations)
                 var_info_block_dict[a_var], myvar_info = myvariant_html(a_var, var_mutations[a_var], genome_reference=reference_genome)
+                #print(var_info_block_dict[a_var])
+                #print(myvar_info)
 
             # Load info from MyVariant run into the info dict
             for key, value in myvar_info.items():
+                #print(key)
                 variant_info_dict[key] = value
+                #print(value)
 
         else:
 

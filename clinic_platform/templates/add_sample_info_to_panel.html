@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<h2>Add sample info to panel</h2>
+
+<div>
+
+    <p>
+        Upload a csv describing any phenotypic data relating to the samples.
+    </p>
+
+<form action="" method="post">
+    {% csrf_token %}
+    <label for="panel_selection">Panel: </label>
+    <select id="panel_selection" name="panel_selection">
+
+        {% for panel in gene_panels %}
+            <option value="{{panel}}">{{panel}}</option>
+        {% endfor %}
+
+    </select>
+
+    <br>
+    <br>
+    CSV file list:<br>
+
+    <select id="csvFiles" name="csvFiles">
+        {% for csv in csv_list %}
+            <option value="{{csv}}">{{csv}}</option>
+        {% endfor %}
+    </select>
+
+    <br>
+
+    <input type="submit" value="OK">
+</form>
+
+</div>
+
+{% endblock %}
