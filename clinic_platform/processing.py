@@ -1,5 +1,5 @@
 import networkx as nx
-import csv, os
+import csv, os, sys
 import django_tables2 as tables
 from clinic_platform.models import CurrentSettings, Experiment, PanelGeneList, GeneInfo, TranscriptInfo, ExonInfo, CDSInfo, GeneExpression, SampleInfo
 import re
@@ -12,6 +12,7 @@ from os.path import isfile, join
 import requests
 
 import myvariant
+from distinctipy import distinctipy
 
 
 def subnet2json(in_graph):
@@ -37,6 +38,10 @@ def subnet2json(in_graph):
 }
 
 '''
+
+
+def hextriplet(colortuple):
+	return '#' + ''.join(f'{i:02X}' for i in colortuple)
 
 
 def save_expression_data(row):
@@ -298,20 +303,57 @@ def filter_variants(var_object, q_threshold):
 
 
 def var_results_to_html_table(var_result_dict, sample_list, selected_panel_obj):
-	html_table = '<table class="table">'
+
+	print(' ------------- Here in the var table function -------------')
+
+	#TODO: Add column for phenotype, colour sample block accordingly
+
+	#TODO: Add family tree visual
+
+	use_phenotype = True
+	use_group = True # This adds the group column
+	use_group_rank = True # This adds a tree like set of columns
+
+	phenotype_key = 'HIV status'
+	group_key = 'Family'
+	group_rank_key = 'Family Member'
+
+
+	if use_phenotype:
+
+		pheno_list = []
+
+		sample_phenotype_dict = SampleInfo.objects.filter(experiment=selected_panel_obj)
+
+		sample_pheno_info = {}
+
+		for thing in sample_phenotype_dict:
+			sample_pheno_info[thing.__str__()] = json.loads(thing.phenotype_info)
+
+		print(sample_pheno_info)
+
+		for a_sample, data in sample_pheno_info.items():
+
+			if data[phenotype_key] not in pheno_list:
+				pheno_list.append(data[phenotype_key])
+
+		colours = distinctipy.get_colors(len(pheno_list), pastel_factor=0.7)
+
+		hex_colour_list = []
+
+		for a_colour in colours:
+			hex_colour_list.append(distinctipy.get_hex(a_colour))
+
+		pheno_colour_dict = dict(zip(pheno_list, hex_colour_list))
+
+		print(pheno_colour_dict)
+
+
+
+	html_table = '<table class="sortable">'
 
 	ordered_var_list = []
 	ordered_gene_header_list = []
-
-	sample_phenotype_dict = SampleInfo.objects.filter(experiment=selected_panel_obj)
-
-	sample_pheno_info = {}
-
-	for thing in sample_phenotype_dict:
-		sample_pheno_info[thing.__str__()] = json.loads(thing.phenotype_info)
-
-
-	print(sample_pheno_info)
 
 
 	for a_gene in var_result_dict.keys():
@@ -340,8 +382,17 @@ def var_results_to_html_table(var_result_dict, sample_list, selected_panel_obj):
 
 	# Create gene header row
 
-	html_table = html_table + '<tr><td></td>'
+	html_table = html_table + '<tr><td>Sample</td>'
 	last_gene = ''
+
+	if use_phenotype:
+		html_table = html_table + '<td>Phenotype</td>'
+
+	if use_group:
+		html_table = html_table + '<td>' + group_key + '</td>'
+
+	if use_group_rank:
+		html_table = html_table + '<td>' + group_rank_key + '</td>'
 
 	for a_gene in ordered_gene_header_list:
 		if a_gene == 'gap':
@@ -357,6 +408,14 @@ def var_results_to_html_table(var_result_dict, sample_list, selected_panel_obj):
 	html_table = html_table + '<tr><td></td>'
 
 	# Create variant header row
+	if use_phenotype:
+		html_table = html_table + '<td></td>'
+
+	if use_group:
+		html_table = html_table + '<td></td>'
+
+	if use_group_rank:
+		html_table = html_table + '<td></td>'
 
 	for a_var in ordered_var_list:
 		if a_var == 'gap':
@@ -374,9 +433,29 @@ def var_results_to_html_table(var_result_dict, sample_list, selected_panel_obj):
 
 		col_num = 0
 
-		row_string = row_string + '<tr>' + '<td class="sampleName">' + a_sample + '</td>'
+		row_string = row_string + '<tr class="item">' + '<td class="sampleName">' + a_sample + '</td>'
 
 		col_string = ''
+
+		# Add a phennotype column
+		if use_phenotype:
+			try:
+				row_string = row_string + '<td class="samplePhenotype" bgcolor="' + pheno_colour_dict[sample_pheno_info[a_sample][phenotype_key]] + '">' + sample_pheno_info[a_sample][phenotype_key] + '</td>'
+			except KeyError:
+				row_string = row_string + '<td class="samplePhenotype">' + '</td>'
+
+		if use_group:
+			try:
+				row_string = row_string + '<td class="sampleGroup" >' + sample_pheno_info[a_sample][group_key] + '</td>'
+			except KeyError:
+				row_string = row_string + '<td class="sampleGroup">' + '</td>'
+
+		if use_group_rank:
+			try:
+				row_string = row_string + '<td class="sampleGroupRank" >' + sample_pheno_info[a_sample][group_rank_key] + '</td>'
+			except KeyError:
+				row_string = row_string + '<td class="sampleGroupRank">' + '</td>'
+
 
 		while col_num < len(ordered_var_list):
 
@@ -416,6 +495,7 @@ def var_results_to_html_table(var_result_dict, sample_list, selected_panel_obj):
 
 
 	# Info div
+	print(' ------------- End var table function -------------')
 
 
 	return html_table
@@ -579,19 +659,60 @@ def myvariant_html(var_pos, mutations, genome_reference='hg38'):
 				html_string += row_string
 
 		else:
-			row_string = '<tr>'
-			# Ref allele
-			row_string += '<td>' + a_mutation.split('>')[0] + '</td>'
 
-			# Alt allele
-			row_string += '<td>' + a_mutation.split('>')[1] + '</td>'
+			server = "https://rest.ensembl.org"
 
-			row_string += '<td>' + 'No annotation info returned' + '</td>'
+			alt_allele = a_mutation.split('>')[1]
 
-			row_string += '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>'
+			ext = "/vep/human/region/" + var_chr.lower().replace('chr', '') + ":" + var_pos + "-" + str( int(var_pos) + len(alt_allele) - 1 ) + "/" + alt_allele + "?minimal=True"
 
-			row_string += '</tr>'
-			html_string += row_string
+			print(ext)
+
+			r = requests.get(server + ext, headers={"Content-Type": "application/json"})
+
+			if not r.ok:
+				row_string = '<tr>'
+				# Ref allele
+				row_string += '<td>' + a_mutation.split('>')[0] + '</td>'
+
+				# Alt allele
+				row_string += '<td>' + a_mutation.split('>')[1] + '</td>'
+
+				row_string += '<td>' + 'No annotation info returned' + '</td>'
+
+				row_string += '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>'
+
+				row_string += '</tr>'
+				html_string += row_string
+			else:
+				decoded = r.json()
+
+				effect_string = ''
+
+				for a_effect in decoded[0]['transcript_consequences']:
+					if 'impact' in a_effect.keys():
+						try:
+							effect_string = effect_string + a_effect['impact'] + ' - ' + ', '.join(a_effect['consequence_terms']) + ' - ' + a_effect['gene_symbol'] + '<br>'
+
+						except KeyError:
+							effect_string = effect_string + a_effect['impact'] + ' - ' + ', '.join(a_effect['consequence_terms']) + '<br>'
+
+
+				row_string = '<tr>'
+				# Ref allele
+				row_string += '<td>' + a_mutation.split('>')[0] + '</td>'
+
+				# Alt allele
+				row_string += '<td>' + a_mutation.split('>')[1] + '</td>'
+
+				row_string += '<td>' + effect_string + '</td>'
+
+				row_string += '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>' + '<td>' + '</td>'
+
+				row_string += '</tr>'
+				html_string += row_string
+
+
 
 
 	html_string += '</tbody></table>'
